@@ -1356,6 +1356,15 @@ export type Database = {
       }
       can_read_booking: { Args: { p_booking: string }; Returns: boolean }
       current_policy_version_id: { Args: never; Returns: string }
+      decide_verification: {
+        Args: {
+          p_admin: string
+          p_approve: boolean
+          p_reason: string
+          p_user: string
+        }
+        Returns: string
+      }
       has_org_role: {
         Args: {
           p_org: string
@@ -1389,6 +1398,32 @@ export type Database = {
       owns_resource: { Args: { p_resource: string }; Returns: boolean }
       path_uuid: { Args: { p_name: string }; Returns: string }
       queue_notifications: { Args: { p_event_id: number }; Returns: undefined }
+      require_admin: { Args: { p_admin: string }; Returns: undefined }
+      seed_demo: { Args: never; Returns: undefined }
+      set_membership: {
+        Args: {
+          p_admin: string
+          p_grant: boolean
+          p_org: string
+          p_reason: string
+          p_replacement?: string
+          p_role: Database["public"]["Enums"]["membership_role"]
+          p_user: string
+        }
+        Returns: undefined
+      }
+      submit_verification: {
+        Args: {
+          p_department: string
+          p_full_name: string
+          p_id_path: string
+          p_phone: string
+          p_roll: string
+          p_user: string
+          p_year: number
+        }
+        Returns: undefined
+      }
       transition_booking: {
         Args: {
           p_actor_id: string

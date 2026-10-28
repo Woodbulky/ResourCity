@@ -33,3 +33,5 @@ export function minutesInDailyWindow(start: Date, end: Date, window: { start: st
   }
   return total;
 }
+
+export const formatDateTime = (d: Date) => formatInTimeZone(d, APP_TIMEZONE, "d MMM yyyy, h:mm a");

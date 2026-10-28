@@ -12,6 +12,7 @@ import { categoryCap, priorityScore, rankRequests } from "./priority";
 import { forfeitsHold, needsStrikeReview, noShowStrikes } from "./strikes";
 import { istInstant, minutesInDailyWindow, weekStart } from "./time";
 import { checkTransition, eventsFrom } from "./transitions";
+import { areasFor, homeFor, redirectFor, type Viewer } from "./access";
 
 const at = (date: string, hhmm: string) => istInstant(date, hhmm);
 const hours = (h: number) => h * 3_600_000;
@@ -256,5 +257,47 @@ describe("time", () => {
   it("finds Monday 00:00 IST", () => {
     expect(weekStart(at("2026-10-29", "15:00")).toISOString()).toBe(at("2026-10-26", "00:00").toISOString());
     expect(weekStart(at("2026-10-26", "00:30")).toISOString()).toBe(at("2026-10-26", "00:00").toISOString());
+  });
+});
+
+describe("route guards", () => {
+  const student: Viewer = {
+    id: "u1", status: "verified", onboardingComplete: true, verificationSubmitted: false,
+    isAdmin: false, roles: { owner: false, manager: false },
+  };
+  const pending: Viewer = { ...student, status: "pending_verification", verificationSubmitted: true };
+  const fresh: Viewer = { ...pending, onboardingComplete: false, verificationSubmitted: false };
+  const owner: Viewer = { ...student, roles: { owner: true, manager: false } };
+  const admin: Viewer = { ...student, isAdmin: true };
+
+  it("sends signed-out users to login and leaves public pages open", () => {
+    expect(redirectFor("/student", null)).toBe("/login");
+    expect(redirectFor("/", null)).toBeNull();
+    expect(redirectFor("/login", null)).toBeNull();
+    expect(redirectFor("/auth/callback", null)).toBeNull();
+  });
+  it("forces onboarding until complete", () => {
+    expect(redirectFor("/student", fresh)).toBe("/onboarding");
+    expect(redirectFor("/onboarding", fresh)).toBeNull();
+    expect(redirectFor("/onboarding", student)).toBe("/student");
+  });
+  it("keeps a pending user off request pages", () => {
+    expect(redirectFor("/student/request/abc", pending)).toBe("/pending");
+    expect(redirectFor("/student/browse", pending)).toBeNull();
+    expect(redirectFor("/onboarding", pending)).toBe("/pending"); // already submitted
+    expect(redirectFor("/onboarding", { ...pending, verificationSubmitted: false })).toBeNull(); // resubmit
+    expect(redirectFor("/pending", student)).toBe("/student");
+  });
+  it("stops suspended users requesting", () => {
+    expect(redirectFor("/student/request/x", { ...student, status: "suspended" })).toBe("/student");
+  });
+  it("guards role areas and picks the role home", () => {
+    expect(redirectFor("/owner", student)).toBe("/student");
+    expect(redirectFor("/admin", owner)).toBe("/owner");
+    expect(redirectFor("/owner", owner)).toBeNull();
+    expect(redirectFor("/student", admin)).toBe("/admin");
+    expect(redirectFor("/login", admin)).toBe("/admin");
+    expect(homeFor({ ...owner, roles: { owner: true, manager: true } })).toBe("/manager");
+    expect(areasFor({ ...owner, isAdmin: true })).toEqual(["student", "owner", "admin"]);
   });
 });

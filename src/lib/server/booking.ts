@@ -39,7 +39,7 @@ export async function transitionBooking(input: TransitionBookingInput): Promise<
 }
 
 // Database errors are raised as "<code>: <detail>"; show the detail, map the guard to plain words.
-function friendlyError(message = "Unknown error"): string {
+export function friendlyError(message = "Unknown error"): string {
   if (message.includes("bookings_no_double_booking")) return "That slot was just taken. Pick another time.";
   const detail = message.split(": ").slice(1).join(": ");
   return detail || message;

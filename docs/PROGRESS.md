@@ -1,5 +1,35 @@
 # ResourCity — progress
 
+## Phase 2 — Auth, shells, landing (code complete, 2026-10-29; Google sign-in awaits provider setup)
+
+### Acceptance
+- Migration 6 `account_actions` applied: `submit_verification()`, `decide_verification()`, `set_membership()`, `require_admin()` (service role only, one transaction each with audit event + notification); `queue_notifications()` extended for verification and role events; recipients may update only `notifications.read_at`.
+- `npm test` → 31 passed (adds route-guard tests). `npx next build` passes with Cache Components.
+- Live check: `node --env-file=.env.local scripts/phase2-check.mjs` → 12 passed (reject needs reason, non-admin refused, reject → resubmit → approve, ID photo only in own folder and only Admin reads it, photo deleted on decision, column locks, one pending request, role grant/revoke with audit diff + notification, last-Manager guard, notifications read-only except `read_at`). Re-seeds before and after. `phase1-check.mjs` still 16/16.
+- Browser (production build): all four demo buttons land in `/student`, `/owner`, `/manager`, `/admin`; Owner/Manager see the role switcher; Admin rejects Om with a reason (empty reason shows an inline error).
+- Guards with real sessions: pending Om → `/student`, `/student/request/*`, `/owner`, `/onboarding`, `/login` all redirect to `/pending`; `/student/browse` opens. Verified Kabir → `/pending`, `/onboarding`, `/manager` redirect to `/student`.
+- Non-college account blocked: with `demo_mode` off, inserting a Google user with an `@gmail.com` email is refused by the trigger; the callback maps the error to "Use your @dvit.edu.in Google account."
+- **Not yet verified: real Google sign-in.** Supabase `/auth/v1/settings` reports `google: false`, so the authorize URL returns "provider is not enabled". `mailer_autoconfirm` is also false (email confirmation still on; seeded demo logins are unaffected).
+
+### Built
+- `src/proxy.ts`: refreshes the Supabase session and applies `redirectFor()` (`src/lib/domain/access.ts`): signed in → onboarding → status → role area. Pages and server actions check again; the proxy is the redirect layer.
+- `src/lib/server/viewer.ts` (`getViewer`, `requireViewer`, `loadViewer`), `src/lib/server/account.ts` (server actions: Google + demo sign-in, sign-out, onboarding, verification decision, role change, mark notifications read).
+- `/auth/callback`, `/login` (demo panel in demo mode), `/onboarding` (ID photo uploaded from the browser straight into `id-proofs/{uid}/`), `/pending` (status or rejection reason + resubmit).
+- App shell with role switcher, notification bell (unread count + `aria-live`), sign-out; `/notifications`; `/student` (bookings with status chips), `/student/bookings/[id]` (timeline), `/student/browse` (plain list), `/owner` and `/manager` (per-org booking counts by status), `/admin` (verification queue, oldest first, signed ID photo URL).
+- Components: `StatusChip` (colour + icon + text, PRD 16), `Timeline`, `BookingList`.
+- Landing v1: hero, how it works, roles, trust, live stats (cached 1 min, aggregates only), footer.
+
+### Decisions and deviations
+1. Rejection keeps `pending_verification`, stores the reason in `status_reason` and clears `verification_submitted_at`; `/onboarding` reopens for resubmission.
+2. Staff and admin accounts skip student onboarding. Admin-only users have no Student area (Admins do not book, PRD 3).
+3. Department is a fixed list (`DEPARTMENTS` in contracts) so it matches resource department restrictions exactly.
+4. Role grant/revoke has its API (server action + SQL) but no Admin screen yet; that is Phase 6 "Organisations and roles".
+
+### Known issues
+- A student verified mid-week has 0 credits until the Monday allowance; decide in Phase 4 whether verification grants a pro-rated allowance.
+- Seeded booking history has few audit events, so most old timelines read "No events yet."
+- Danger chip (`#DB3030` on `#FFEAE5`, bold 12 px) is close to the 4.5:1 limit; recheck in the Phase 7 accessibility pass.
+
 ## Phase 1 — Foundation (complete, 2026-10-29)
 
 ### Acceptance
@@ -41,4 +71,4 @@
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 2 — Auth, shells, landing: Google OAuth callback, onboarding with ID upload, verification and role APIs, `src/proxy.ts` route guards, login demo panel, role app shells, status chips, timeline, landing v1. Needs the architect's Google Cloud + Supabase Auth setup (PRD 4, "Manual setup").
+Phase 2 sign-off once Google sign-in is tested end to end (enable the Google provider in Supabase first). Then Phase 3 — core happy path (PRD 18): listing form, search + eligibility cards, request + approval, QR handover, return, timeline.
