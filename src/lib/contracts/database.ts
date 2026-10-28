@@ -1349,6 +1349,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_condition: {
+        Args: {
+          p_booking: string
+          p_phase: Database["public"]["Enums"]["condition_phase"]
+          p_user: string
+        }
+        Returns: undefined
+      }
       app_now: { Args: never; Returns: string }
       booking_holds_credits: {
         Args: { p_status: Database["public"]["Enums"]["booking_status"] }
@@ -1363,6 +1371,55 @@ export type Database = {
           p_reason: string
           p_user: string
         }
+        Returns: string
+      }
+      door_checkin: {
+        Args: { p_token: string; p_user: string }
+        Returns: {
+          allocation_rule: string | null
+          approver_role: Database["public"]["Enums"]["approver_role"]
+          attachments: string[]
+          created_at: string
+          credit_charged: number | null
+          credit_hold: number
+          cutoff_at: string | null
+          decided_by: string | null
+          eligibility_snapshot: Json | null
+          end_at: string
+          escalated_at: string | null
+          escalation_level: number
+          exception_reason: string | null
+          grace_minutes: number | null
+          id: string
+          is_exception: boolean
+          offer_expires_at: string | null
+          picked_up_at: string | null
+          policy_version_id: string
+          priority_score: number | null
+          purpose_category: Database["public"]["Enums"]["purpose_category"]
+          purpose_text: string
+          purpose_verified: boolean
+          request_group_id: string | null
+          resource_id: string
+          returned_at: string | null
+          score_breakdown: Json | null
+          start_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          status_reason: string | null
+          unit_id: string | null
+          updated_at: string
+          user_id: string
+          waitlist_position: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      free_unit: {
+        Args: { p_end: string; p_resource: string; p_start: string }
         Returns: string
       }
       has_org_role: {
@@ -1398,6 +1455,60 @@ export type Database = {
       owns_resource: { Args: { p_resource: string }; Returns: boolean }
       path_uuid: { Args: { p_name: string }; Returns: string }
       queue_notifications: { Args: { p_event_id: number }; Returns: undefined }
+      record_condition: {
+        Args: {
+          p_actor: string
+          p_actor_role: string
+          p_booking: string
+          p_checklist: Json
+          p_notes: string
+          p_phase: Database["public"]["Enums"]["condition_phase"]
+          p_photos: Json
+          p_supervisor: string
+        }
+        Returns: {
+          allocation_rule: string | null
+          approver_role: Database["public"]["Enums"]["approver_role"]
+          attachments: string[]
+          created_at: string
+          credit_charged: number | null
+          credit_hold: number
+          cutoff_at: string | null
+          decided_by: string | null
+          eligibility_snapshot: Json | null
+          end_at: string
+          escalated_at: string | null
+          escalation_level: number
+          exception_reason: string | null
+          grace_minutes: number | null
+          id: string
+          is_exception: boolean
+          offer_expires_at: string | null
+          picked_up_at: string | null
+          policy_version_id: string
+          priority_score: number | null
+          purpose_category: Database["public"]["Enums"]["purpose_category"]
+          purpose_text: string
+          purpose_verified: boolean
+          request_group_id: string | null
+          resource_id: string
+          returned_at: string | null
+          score_breakdown: Json | null
+          start_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          status_reason: string | null
+          unit_id: string | null
+          updated_at: string
+          user_id: string
+          waitlist_position: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       require_admin: { Args: { p_admin: string }; Returns: undefined }
       seed_demo: { Args: never; Returns: undefined }
       set_membership: {
@@ -1411,6 +1522,58 @@ export type Database = {
           p_user: string
         }
         Returns: undefined
+      }
+      submit_booking: {
+        Args: {
+          p_end: string
+          p_event: string
+          p_fields: Json
+          p_resource: string
+          p_start: string
+          p_user: string
+        }
+        Returns: {
+          allocation_rule: string | null
+          approver_role: Database["public"]["Enums"]["approver_role"]
+          attachments: string[]
+          created_at: string
+          credit_charged: number | null
+          credit_hold: number
+          cutoff_at: string | null
+          decided_by: string | null
+          eligibility_snapshot: Json | null
+          end_at: string
+          escalated_at: string | null
+          escalation_level: number
+          exception_reason: string | null
+          grace_minutes: number | null
+          id: string
+          is_exception: boolean
+          offer_expires_at: string | null
+          picked_up_at: string | null
+          policy_version_id: string
+          priority_score: number | null
+          purpose_category: Database["public"]["Enums"]["purpose_category"]
+          purpose_text: string
+          purpose_verified: boolean
+          request_group_id: string | null
+          resource_id: string
+          returned_at: string | null
+          score_breakdown: Json | null
+          start_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          status_reason: string | null
+          unit_id: string | null
+          updated_at: string
+          user_id: string
+          waitlist_position: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       submit_verification: {
         Args: {
