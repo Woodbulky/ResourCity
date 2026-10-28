@@ -102,7 +102,9 @@ const RES_STATUS: Record<ResourceStatus, { tone: FlagTone; label: string }> = {
 export function ResourceTile({
   r,
   out,
+  children,
 }: {
+  children?: React.ReactNode;
   r: { id: string; name: string; category: ResourceCategory; status: ResourceStatus; quantity: number; base_rate: number; rate_unit: "hour" | "day"; location: string; allocation_mode: string; approval_mode: string };
   out?: number;
 }) {
@@ -124,6 +126,7 @@ export function ResourceTile({
           <Flag tone="info">{r.allocation_mode === "batch" ? "Batch" : r.approval_mode === "auto" ? "Auto-approve" : `${r.approval_mode === "manager" ? "Manager" : "Owner"} approval`}</Flag>
         </div>
         <p className="sr-only">{CATEGORIES[r.category].label}</p>
+        {children && <div className="mt-4 flex flex-wrap gap-2">{children}</div>}
       </div>
     </article>
   );

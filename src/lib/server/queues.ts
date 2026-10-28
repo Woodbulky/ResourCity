@@ -35,7 +35,7 @@ export const ownerDesk = cache(async (viewer: SessionViewer) => {
       .order("created_at"),
     supabase
       .from("resources")
-      .select("id, name, category, status, quantity, base_rate, rate_unit, approval_mode, allocation_mode, location, org_id, estimated_current_usage")
+      .select("id, name, category, form_template, status, quantity, base_rate, rate_unit, approval_mode, allocation_mode, location, org_id, estimated_current_usage")
       .in("org_id", ids)
       .order("name"),
   ]);

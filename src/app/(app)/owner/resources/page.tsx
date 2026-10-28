@@ -1,11 +1,12 @@
 import { Building2, Clock, PackageOpen, Plus, TriangleAlert } from "lucide-react";
 import { ResourceTile } from "@/components/staff";
-import { Button } from "@/components/ui/button";
-import { ComingNext, EmptyState, PageHeading, SummaryCard, SummaryRow } from "@/components/ui/kit";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState, PageHeading, SummaryCard, SummaryRow } from "@/components/ui/kit";
 import { ownerDesk } from "@/lib/server/queues";
 import { requireViewer } from "@/lib/server/viewer";
 
-// Owner listings (PRD 6). The listing form with four templates lands in Phase 3.
+// Owner listings (PRD 6): create, edit and print door QRs for spaces.
 export default async function OwnerResources() {
   const viewer = await requireViewer();
   const d = await ownerDesk(viewer);
@@ -24,11 +25,8 @@ export default async function OwnerResources() {
           </>
         }
         description="Keep resources up to date and easy to find. Rule changes apply to new requests only."
-        actions={<Button disabled><Plus aria-hidden /> Add a resource</Button>}
+        actions={<Link href="/owner/resources/new" className={buttonVariants()}><Plus aria-hidden /> Add a resource</Link>}
       />
-      <div className="mb-5 max-w-xl">
-        <ComingNext phase={3}>The listing form with Space, Lab, Portable and Machine templates, rules and guided shots.</ComingNext>
-      </div>
       <SummaryRow>
         <SummaryCard label="Listings" value={d.resources.length} note={`${units} units in total`} icon={Building2} />
         <SummaryCard label="Borrowed now" value={d.borrowed.length} note={`${d.returnsDue.length} due back today`} icon={PackageOpen} />
@@ -37,7 +35,14 @@ export default async function OwnerResources() {
       </SummaryRow>
       {d.resources.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {d.resources.map((r) => <ResourceTile key={r.id} r={r} out={out.get(r.id)} />)}
+          {d.resources.map((r) => (
+            <ResourceTile key={r.id} r={r} out={out.get(r.id)}>
+              <Link href={`/owner/resources/${r.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>Edit</Link>
+              {(r.form_template === "space" || r.form_template === "lab") && (
+                <Link href={`/owner/resources/${r.id}/door`} className={buttonVariants({ variant: "ghost", size: "sm" })}>Door QR</Link>
+              )}
+            </ResourceTile>
+          ))}
         </div>
       ) : (
         <EmptyState icon={Building2} title="No listings yet.">Your first resource will appear here.</EmptyState>
