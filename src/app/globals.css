@@ -6,9 +6,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-dm-sans);
+  --font-serif: var(--font-instrument-serif);
   --font-mono: var(--font-source-code-pro);
-  --font-heading: var(--font-inter);
+  --font-heading: var(--font-instrument-serif);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -25,37 +26,63 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-evergreen: var(--green-dark-3);
-  --color-forest: var(--green-dark-2);
-  --color-spring: var(--green-base);
-  --color-mist: var(--green-light-3);
-  --color-slate: var(--black);
-  --radius-sm: var(--radius-input);
+
+  --color-pine-deep: var(--pine-deep);
+  --color-pine: var(--pine);
+  --color-pine-hover: var(--pine-hover);
+  --color-moss: var(--moss);
+  --color-sage: var(--sage);
+  --color-sage-strong: var(--sage-strong);
+  --color-leaf: var(--leaf);
+  --color-leaf-bright: var(--leaf-bright);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-wash: var(--wash);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-pending-bg: var(--pending-bg);
+  --color-pending-fg: var(--pending-fg);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-borrowed-bg: var(--borrowed-bg);
+  --color-borrowed-fg: var(--borrowed-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-fg: var(--neutral-fg);
+  --color-honey: var(--honey);
+  --color-coral: var(--coral);
+
+  --radius-sm: 6px;
   --radius-md: var(--radius-input);
   --radius-lg: var(--radius-card);
-  --radius-xl: calc(var(--radius-card) * 1.5);
+  --radius-xl: 18px;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
 }
 
 /* shadcn semantic tokens mapped onto the ResourCity palette (light theme only). */
 :root {
-  --background: var(--gray-light-3);
-  --foreground: var(--black);
-  --card: var(--white);
-  --card-foreground: var(--black);
-  --popover: var(--white);
-  --popover-foreground: var(--black);
-  --primary: var(--green-dark-2);
-  --primary-foreground: var(--white);
-  --secondary: var(--gray-light-2);
-  --secondary-foreground: var(--black);
-  --muted: var(--gray-light-2);
-  --muted-foreground: var(--gray-dark-2);
-  --accent: var(--green-light-3);
-  --accent-foreground: var(--green-dark-3);
-  --destructive: var(--red-base);
-  --border: var(--gray-light-2);
-  --input: var(--gray-light-2);
-  --ring: var(--green-dark-2);
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--pine);
+  --primary-foreground: var(--paper);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--sage);
+  --accent-foreground: var(--pine);
+  --destructive: var(--danger-fg);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--moss);
   --radius: var(--radius-card);
 }
 
@@ -63,22 +90,110 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: #d7efa9;
+    color: var(--pine-deep);
   }
   :focus-visible {
-    outline: 2px solid var(--green-dark-2);
+    outline: 2px solid var(--moss);
     outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+@layer components {
+  /* Display serif headings with an italic, moss-green emphasis (<em>). */
+  .display {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+  }
+  .display em {
+    color: var(--moss);
+  }
+  .on-dark .display em,
+  .display.on-dark em {
+    color: var(--leaf);
+  }
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  /* Concentric decorative rings used on hero and wallet cards. */
+  .rings::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border-radius: 9999px;
+    border: 1px solid currentColor;
+    opacity: 0.16;
+    width: var(--ring-size, 260px);
+    height: var(--ring-size, 260px);
+    top: var(--ring-top, -90px);
+    right: var(--ring-right, -60px);
+    box-shadow:
+      0 0 0 26px color-mix(in srgb, currentColor 5%, transparent),
+      0 0 0 54px color-mix(in srgb, currentColor 3%, transparent);
+  }
+  .lift {
+    transition:
+      transform 0.25s cubic-bezier(0.2, 0.75, 0.2, 1),
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+    border-color: var(--line-strong);
+  }
+  .page-in {
+    animation: page-in 0.44s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  }
+  .pop-in {
+    animation: pop-in 0.18s ease both;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

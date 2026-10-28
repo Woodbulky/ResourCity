@@ -6,6 +6,7 @@ export type ResourceCategory = Database["public"]["Enums"]["resource_category"];
 export type ApprovalMode = Database["public"]["Enums"]["approval_mode"];
 export type AllocationMode = Database["public"]["Enums"]["allocation_mode"];
 export type RateUnit = Database["public"]["Enums"]["rate_unit"];
+export type ResourceStatus = Database["public"]["Enums"]["resource_status"];
 
 // Breaking a rule either blocks the request or sends it for review (an exception request).
 export const ruleMode = z.enum(["block", "review"]);

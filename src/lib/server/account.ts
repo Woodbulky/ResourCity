@@ -105,7 +105,7 @@ export async function decideVerification(_prev: ActionResult | null, form: FormD
   if (error) return { ok: false, error: friendlyError(error.message) };
   // PRD 4: the ID photo is deleted on either decision. A failed delete never undoes the decision.
   if (idPath) await service.storage.from("id-proofs").remove([idPath]);
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout"); // overview, queue and the sidebar count
   return { ok: true, message: parsed.data.approve ? "Student verified." : "Verification rejected." };
 }
 
@@ -131,7 +131,7 @@ export async function changeMembership(_prev: ActionResult | null, form: FormDat
     p_replacement: d.replacementUserId,
   });
   if (error) return { ok: false, error: friendlyError(error.message) };
-  revalidatePath("/admin");
+  revalidatePath("/admin/people");
   return { ok: true, message: d.grant ? "Role granted." : "Role revoked." };
 }
 
@@ -141,5 +141,5 @@ export async function markNotificationsRead() {
   const supabase = await createClient();
   const now = (await appNow()).toISOString();
   await supabase.from("notifications").update({ read_at: now }).is("read_at", null).eq("user_id", viewer.id);
-  revalidatePath("/notifications");
+  revalidatePath("/", "layout"); // the bell in every page header shows the unread count
 }

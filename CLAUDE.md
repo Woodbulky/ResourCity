@@ -12,5 +12,5 @@ Read docs/PRD.md before working. Current phase and status: docs/PROGRESS.md.
 - RLS on every table. Service-role key server-side only. Reasons required for consequential actions.
 - AI = suggestions with confidence. Never decides access, damage or penalties.
 - Folder ownership: lead = contracts, migrations, domain; backend = app/api, supabase functions; frontend = app pages, components; worker = worker/, lib/ai.
-- Palette: MongoDB light theme tokens in src/styles/tokens.css. Never #00ED64 as text on white.
+- Palette: "campus green" tokens in src/styles/tokens.css (pine, moss, leaf, cream; replaced the MongoDB palette on the architect's request). --leaf / --leaf-bright never carry text on light backgrounds. Shared UI kit: src/components/ui/kit.tsx.
 - Stuck > 20 min: stub behind a flag, note it in PROGRESS.md, continue.

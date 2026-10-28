@@ -1,29 +1,43 @@
-/* MongoDB (LeafyGreen) light palette — PRD Section 16.
-   Never use --green-base (#00ED64) or --green-dark-1 (#00A35C) as small text on white. */
+/* ResourCity "campus green" light palette. Every text pair below meets WCAG 2.1 AA (4.5:1).
+   --leaf and --leaf-bright are accents: text on dark (pine) backgrounds only, or dark text on them. */
 :root {
-  --green-dark-3: #023430; /* Evergreen: headings on light green, hero background */
-  --green-dark-2: #00684a; /* Forest: primary buttons, links, focus ring */
-  --green-dark-1: #00a35c; /* icons, large decorative elements only */
-  --green-base: #00ed64; /* Spring: accents, text on dark backgrounds only */
-  --green-light-2: #c0fae6; /* selected states */
-  --green-light-3: #e3fcf7; /* Mist: success backgrounds, hero tint */
-  --black: #001e2b; /* Slate: body text */
-  --gray-dark-2: #3d4f58; /* secondary text */
-  --gray-base: #889397; /* disabled; placeholders on white only with large text */
-  --gray-light-2: #e8edeb; /* borders, dividers */
-  --gray-light-3: #f9fbfa; /* page background */
-  --white: #ffffff; /* cards, surfaces */
-  --blue-base: #016bf8; /* info, waitlist */
-  --blue-dark-1: #1254b7; /* waitlist chip text */
-  --blue-light-3: #e1f7ff;
-  --yellow-dark-2: #944f01; /* pending, warnings */
-  --yellow-light-3: #fef7db;
-  --red-base: #db3030; /* errors, overdue, rejected */
-  --red-light-3: #ffeae5;
-  --purple-base: #b45af2; /* currently borrowed */
-  --purple-dark-1: #8a37c2; /* borrowed chip text, darkened for contrast */
-  --purple-light-3: #f5e8fd;
+  /* Greens */
+  --pine-deep: #0c3029; /* sidebar, dark sections */
+  --pine: #123e34; /* primary buttons, hero cards */
+  --pine-hover: #1b5742;
+  --moss: #2f6448; /* links, accent text, icons on light */
+  --sage: #e6f1d9; /* success / approved backgrounds */
+  --sage-strong: #2c5e38; /* text on --sage */
+  --leaf: #bfe879; /* accent on dark only */
+  --leaf-bright: #d1f591; /* lime buttons, dark text only */
 
-  --radius-card: 8px;
-  --radius-input: 6px;
+  /* Neutrals */
+  --ink: #18372f; /* body text */
+  --ink-soft: #566a5e; /* secondary text (5.3:1 on cream) */
+  --cream: #f4f5ed; /* page background */
+  --paper: #fffefa; /* cards, surfaces */
+  --wash: #eef0e6; /* tinted panels, tab rails */
+  --line: #e3e6d9; /* borders, dividers */
+  --line-strong: #cfd8c6;
+
+  /* Status tones: background / text */
+  --pending-bg: #fbf1d3;
+  --pending-fg: #7a5612;
+  --info-bg: #e4eefa;
+  --info-fg: #1d4f91;
+  --borrowed-bg: #ebe8f8;
+  --borrowed-fg: #4d4391;
+  --danger-bg: #fbe5df;
+  --danger-fg: #9f3322;
+  --neutral-bg: #eceee6;
+  --neutral-fg: #4b5b51;
+
+  /* Decorative only (never text) */
+  --honey: #e2b955;
+  --coral: #df7864;
+
+  --radius-card: 14px;
+  --radius-input: 10px;
+  --shadow-card: 0 16px 34px rgba(26, 55, 44, 0.08);
+  --shadow-pop: 0 22px 60px rgba(25, 53, 41, 0.17);
 }

@@ -1,5 +1,28 @@
 # ResourCity — progress
 
+## UI redesign (2026-10-29, between Phase 2 and Phase 3; architect request)
+
+The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was rebuilt in that format in Next.js against our real backend and flows; the mockup's sample data and flows were not copied.
+
+### Built
+- **Design system:** new "campus green" palette in `src/styles/tokens.css` (pine, moss, leaf, cream, paper + status tones), every text pair checked at WCAG AA (≥ 4.5:1). DM Sans for UI, Instrument Serif for display headings, Source Code Pro for codes and times. Shared kit in `src/components/ui/kit.tsx` (page heading, panels, summary cards, tabs, empty states, `ComingNext`).
+- **Shell:** dark sidebar per role area with live counts, workspace/role menu with sign-out, topbar with simulated-clock date, notification popover (latest 5, mark all read, `aria-live` count), mobile drawer. Each part streams in its own Suspense boundary.
+- **Public:** landing (hero with product vignette, how it works, what we share, fairness, live stats that degrade to "—" if the database is unreachable, roles), split-screen login with demo role cards, onboarding with ID dropzone, pending page with progress steps.
+- **Student:** overview (needs-your-action first, hero, wallet card, standing, picks, coming up), browse with search, category chips and "eligible for me / instant / free" filters, resource detail (full eligibility checklist from `checkEligibility()`, rules, bookable hours, condition checklist, request summary), My bookings with tabs, booking detail (score breakdown, timeline, credits, condition records, damage case), credits wallet (balance, holds, ledger, standing, emergency requests).
+- **Owner:** desk overview, requests (needs review / waiting for Manager), handover desk tabs, resources. **Manager:** urgency-sorted decision queue (critical → urgent → normal, oldest first), safety and disputes, department insights (recorded hours per week and resource, on-time rate, no-shows). **Admin:** overview, verifications, people and roles (grant/revoke wired to `changeMembership`, with reasons and replacement), campus policies with version history, audit log with search and filters. Owners and Managers share a staff booking detail page.
+- Read models: `src/lib/server/queues.ts` (owner desk, manager queue, admin queue, insights, inbox) and `src/lib/server/student.ts` (student snapshot, catalogue with eligibility per card). All reads go through RLS as the signed-in user.
+
+### Decisions and deviations
+1. **Palette changed from the PRD 16 MongoDB tokens** to the mockup's green family, at the architect's request. CLAUDE.md updated. Status chips still use colour + icon + text.
+2. Resource covers are illustrated per category (no stock photos): the sandbox cannot reach image hosts, and real photos arrive with Owner uploads.
+3. Actions whose server flow is a later phase (request submit, approve/reject, scanner, handover, dispute decisions, policy edit, CSV export) are shown disabled with a "Arrives in Phase N" note instead of being faked.
+4. Card eligibility runs every slot-independent check; availability and duration are checked once a slot is picked, so a card never claims "Eligible" for a check it did not run (PRD 7).
+
+### Verified
+- `tsc`, `eslint` and `npm test` (31) pass; `next build` passes with Cache Components.
+- Landing and login screenshotted at 1440 px and 390 px with no horizontal overflow; shell, drawer, popover and dashboard components checked on a throwaway preview route with sample data.
+- **Not yet verified against the live database** from this environment (no Supabase access here): run the four demo logins on the Vercel preview.
+
 ## Phase 2 — Auth, shells, landing (code complete, 2026-10-29; Google sign-in awaits provider setup)
 
 ### Acceptance

@@ -1,28 +1,26 @@
-import { createClient } from "@/lib/server/supabase";
+import { ResourceBrowser } from "@/components/resource-browser";
+import { PageHeading } from "@/components/ui/kit";
+import { catalog, toCard } from "@/lib/server/student";
 import { requireViewer } from "@/lib/server/viewer";
 
-// Phase 2: plain resource list so pending students can browse. Search, filters and eligibility
-// on each card arrive in Phase 3 (PRD 7).
+// Discovery (PRD 7): every card runs the eligibility engine for this student, so they see
+// whether they qualify, and why not, before they request. Pending students may browse.
 export default async function BrowsePage() {
-  await requireViewer();
-  const { data: resources } = await (await createClient())
-    .from("resources")
-    .select("id, name, location, description, organizations(name)")
-    .eq("status", "active")
-    .order("name");
+  const viewer = await requireViewer();
+  const resources = await catalog(viewer);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Browse resources</h1>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {resources?.map((r) => (
-          <li key={r.id} className="space-y-1 rounded-lg border bg-card p-4">
-            <h2 className="font-semibold">{r.name}</h2>
-            <p className="text-sm text-muted-foreground">{r.organizations?.name} · {r.location}</p>
-            <p className="line-clamp-3 text-sm">{r.description}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <PageHeading
+        eyebrow="The campus, open to you"
+        title={
+          <>
+            Find your next <em>something.</em>
+          </>
+        }
+        description="A room for the whole team, a camera for a new idea, a machine for your project. Every card shows whether you qualify before you ask."
+      />
+      <ResourceBrowser resources={resources.map(toCard)} />
+    </>
   );
 }
