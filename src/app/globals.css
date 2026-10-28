@@ -1,0 +1,84 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-source-code-pro);
+  --font-heading: var(--font-inter);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-evergreen: var(--green-dark-3);
+  --color-forest: var(--green-dark-2);
+  --color-spring: var(--green-base);
+  --color-mist: var(--green-light-3);
+  --color-slate: var(--black);
+  --radius-sm: var(--radius-input);
+  --radius-md: var(--radius-input);
+  --radius-lg: var(--radius-card);
+  --radius-xl: calc(var(--radius-card) * 1.5);
+}
+
+/* shadcn semantic tokens mapped onto the ResourCity palette (light theme only). */
+:root {
+  --background: var(--gray-light-3);
+  --foreground: var(--black);
+  --card: var(--white);
+  --card-foreground: var(--black);
+  --popover: var(--white);
+  --popover-foreground: var(--black);
+  --primary: var(--green-dark-2);
+  --primary-foreground: var(--white);
+  --secondary: var(--gray-light-2);
+  --secondary-foreground: var(--black);
+  --muted: var(--gray-light-2);
+  --muted-foreground: var(--gray-dark-2);
+  --accent: var(--green-light-3);
+  --accent-foreground: var(--green-dark-3);
+  --destructive: var(--red-base);
+  --border: var(--gray-light-2);
+  --input: var(--gray-light-2);
+  --ring: var(--green-dark-2);
+  --radius: var(--radius-card);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  :focus-visible {
+    outline: 2px solid var(--green-dark-2);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

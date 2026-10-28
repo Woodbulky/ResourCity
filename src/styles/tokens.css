@@ -1,0 +1,29 @@
+/* MongoDB (LeafyGreen) light palette — PRD Section 16.
+   Never use --green-base (#00ED64) or --green-dark-1 (#00A35C) as small text on white. */
+:root {
+  --green-dark-3: #023430; /* Evergreen: headings on light green, hero background */
+  --green-dark-2: #00684a; /* Forest: primary buttons, links, focus ring */
+  --green-dark-1: #00a35c; /* icons, large decorative elements only */
+  --green-base: #00ed64; /* Spring: accents, text on dark backgrounds only */
+  --green-light-2: #c0fae6; /* selected states */
+  --green-light-3: #e3fcf7; /* Mist: success backgrounds, hero tint */
+  --black: #001e2b; /* Slate: body text */
+  --gray-dark-2: #3d4f58; /* secondary text */
+  --gray-base: #889397; /* disabled; placeholders on white only with large text */
+  --gray-light-2: #e8edeb; /* borders, dividers */
+  --gray-light-3: #f9fbfa; /* page background */
+  --white: #ffffff; /* cards, surfaces */
+  --blue-base: #016bf8; /* info, waitlist */
+  --blue-dark-1: #1254b7; /* waitlist chip text */
+  --blue-light-3: #e1f7ff;
+  --yellow-dark-2: #944f01; /* pending, warnings */
+  --yellow-light-3: #fef7db;
+  --red-base: #db3030; /* errors, overdue, rejected */
+  --red-light-3: #ffeae5;
+  --purple-base: #b45af2; /* currently borrowed */
+  --purple-dark-1: #8a37c2; /* borrowed chip text, darkened for contrast */
+  --purple-light-3: #f5e8fd;
+
+  --radius-card: 8px;
+  --radius-input: 6px;
+}
