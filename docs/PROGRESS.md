@@ -1,6 +1,13 @@
 # ResourCity — progress
 
-## Phase 0 — Setup (in progress)
+## Phase 0 — Setup (complete, 2026-10-29)
+
+### Acceptance
+- Production URL loads: https://resour-city.vercel.app/ (HTTP 200, placeholder landing), auto-deploys from `main`.
+- AI router smoke test passed: base URL `https://api.airouter.in/v1`, model `deepseek/deepseek-v4.1-flash-1017`.
+  - text: HTTP 200 in 2188 ms, reply `{"ok": true}`
+  - image (data-URL PNG): HTTP 200 in 3607 ms, reply `{"colour": "green"}`
+  - Fallback vision model also passes: `deepseek/deepseek-v4-flash-vision-exp`.
 
 ### Done
 - Next.js 16.4 (App Router, TypeScript, `src/` dir), Tailwind v4, shadcn/ui (base-nova style), zod 4, date-fns + date-fns-tz, @supabase/ssr + supabase-js.
@@ -11,12 +18,8 @@
 - Placeholder landing page at `/` (`src/app/(marketing)/page.tsx`).
 - AI smoke test script: `scripts/ai-smoke.mjs`.
 
-### Pending (needs the architect)
-- AI router smoke test: needs `AI_ROUTER_BASE_URL` and `AI_ROUTER_API_KEY` in `.env.local`; exact model string and base URL to be recorded here once it passes.
-- `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (Supabase dashboard → Project Settings → API keys).
-- Vercel project connected to `main` with the env vars set; preview URL to be recorded here.
-
 ### Deviations from the PRD
+- Model string: the router rejects `deepseek-v4.1-1017`; the exact id is `deepseek/deepseek-v4.1-flash-1017` (PRD Sections 2 and 14 asked to confirm it in Phase 0).
 - Next.js 16 renames `middleware.ts` to `proxy.ts`; route guards (Section 4) will live in `src/proxy.ts`.
 - Browser Supabase client lives in `src/lib/supabase/` (Section 2 lists only the server folder).
 
