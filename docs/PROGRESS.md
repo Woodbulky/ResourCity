@@ -29,8 +29,9 @@
 7. No notifications to Owners/Managers for new requests yet (Section 13 matrix is Phase 4).
 
 ### Known issues
-- Submitting a request or a decision takes 4–8 s on Vercel (several sequential reads per action); a click made while a page is still streaming can be lost. Revisit in the Phase 7 hardening pass.
-- On `/owner/bookings/[id]` the sidebar highlights Overview instead of Requests or Handovers.
+- Fixed: Vercel functions ran in `iad1` (Washington) while Supabase is in `eu-west-1` (Ireland), so every query crossed the Atlantic. `vercel.json` now pins `dub1`. `scripts/timing.mjs`, warm signed-in pages from India: overview 2.4–2.6 s → 0.7–0.9 s, slot summary 2.7–3.3 s → 0.66–0.88 s, bookings 1.4–2.0 s → 0.49–0.64 s. Cold starts are still 1.5–3.7 s.
+- A click made while a page is still streaming can be lost (forms need JS to submit). Revisit in the Phase 7 hardening pass.
+- Fixed: booking pages now highlight Requests (Owner) or Decision queue (Manager) in the sidebar.
 - Seeded demo accounts have no Google photo, so the scanner's identity card shows initials.
 
 ## UI redesign (2026-10-29, between Phase 2 and Phase 3; architect request)
