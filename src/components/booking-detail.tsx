@@ -28,7 +28,7 @@ const FACTORS: [keyof Omit<ScoreBreakdown, "total">, string, number][] = [
 ];
 
 const STAFF_NEXT: Partial<Record<string, string>> = {
-  pending_approval: "Approve, reject with a reason, waitlist, or ask for more information.",
+  pending_approval: "Approve, or reject or waitlist with a reason the student will see.",
   approved: "Scan the student's QR at pickup, then record the checklist and guided photos together.",
   checked_out: "At return, scan again and record the same checklist and photos.",
   overdue: "Record the return when it comes back; a late penalty is proposed to the Manager.",

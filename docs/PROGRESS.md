@@ -1,13 +1,14 @@
 # ResourCity — progress
 
-## Phase 3 — Core happy path (code complete, 2026-10-29; click-through on Vercel pending)
+## Phase 3 — Core happy path (complete, 2026-10-29)
 
 ### Acceptance
 - Migration 7 `booking_flow` applied: `submit_booking()` (validate → insert → hold if approved → audit → notify, one transaction), `free_unit()`, `transition_booking()` now assigns a free unit on approve/offer (pending requests hold no unit), `record_condition()` (Owner-signed checklist + ≥ 3 photos under `condition-photos/{booking}/`, supervisor when required, then handover/return in the same transaction), `acknowledge_condition()`, `door_checkin()`. All service role only.
 - `npm test` → 41 passed (adds bookable hours, submission routing, signed QR). `next build` passes.
 - Live journey: `node --env-file=.env.local scripts/phase3-check.mjs` → 13 passed: students cannot call `submit_booking`; unverified refused; submit → pending with no unit or hold; duplicate refused; reject needs a reason; another org's Owner refused; approve assigns a unit and holds 10; handover needs 3 photos in the booking's folder; signed handover → checked_out; only the student acknowledges, once; return → Return OK charges 10, ledger `hold −10, release +10, charge −10`; timeline has all six events; instant meeting room + door check-in (wrong student and bad code refused); a full slot refuses a second auto-approve and waitlists at #1. `phase1-check` 16/16 and `phase2-check` 12/12 still pass.
 - Pages: `scripts/phase3-pages.mjs` (against `next start`) renders all 18 Phase 3 pages as Riya, the Photography Club Owner and Prof. Mehta: slot summary, out-of-hours error, pickup QR, cancel/withdraw, door check-in, approval form with requester history, scan with a valid and a tampered code, handover with and without a scan, listing new/edit, handover desk.
-- **Not yet verified:** clicking through the server actions in a browser (the Chrome extension was not connected this session) and the journey on the Vercel deployment. **`QR_SIGNING_SECRET` must be set in Vercel** or QR pages fail.
+- **Browser, production URL** (clock set to 10:00 IST by SQL, as PRD 18 allows): Owner lists "GoPro HERO action camera" → Riya finds it by search, picks 10:15 today → 10:15 tomorrow, sees 9 passing checks and the summary (6 credits, 94 after hold, Owner approval, 120 min grace), sends the request → Owner approves (6 held) → Riya's pickup QR renders (so `QR_SIGNING_SECRET` is set on Vercel) → Owner pastes the code into the scanner, sees the identity card, opens the handover, marks one item as an issue with a note, attaches 3 photos (uploaded to storage, shown back via signed URLs) → checked out → Owner records the return with 3 photos → Return OK (returned before the start, so 0 charged, 6 released) → Riya acknowledges both records; the timeline shows all seven events. Demo data re-seeded and the clock reset afterwards.
+- Found and fixed in the run: the slot picker defaulted to :30 (rounded to the UTC hour, not IST); the decision panel mentioned "ask for more information", which is not built.
 
 ### Built
 - **Request** (`/student/browse/[id]`): slot picker (GET form, campus time), full eligibility for that slot including availability and bookable hours, request summary (cost, hold, balance after hold, where it lands, cutoff, grace, no-show rule), purpose, exception reason when a rule is set to review. Submit lands as approved / pending approval (Owner or Manager) / waitlisted / pending allocation via `planSubmission()`.
@@ -26,6 +27,11 @@
 5. The scanner lives under `/owner`; a Manager who is not also an Owner records returns from the booking page but cannot scan a pickup.
 6. Editing a listing cannot change quantity or status; pause/maintenance with booking cancellation is Phase 6. Resource create + its audit event are two calls, not one transaction (marked `ponytail:`).
 7. No notifications to Owners/Managers for new requests yet (Section 13 matrix is Phase 4).
+
+### Known issues
+- Submitting a request or a decision takes 4–8 s on Vercel (several sequential reads per action); a click made while a page is still streaming can be lost. Revisit in the Phase 7 hardening pass.
+- On `/owner/bookings/[id]` the sidebar highlights Overview instead of Requests or Handovers.
+- Seeded demo accounts have no Google photo, so the scanner's identity card shows initials.
 
 ## UI redesign (2026-10-29, between Phase 2 and Phase 3; architect request)
 
@@ -121,4 +127,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 3 sign-off: set `QR_SIGNING_SECRET` in Vercel, then run list → discover → request → approve → QR pickup → return → timeline on the production URL with the demo logins. Then Phase 4 — time, fairness, credits (PRD 18).
+Phase 4 — time, fairness, credits (PRD 18).

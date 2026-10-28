@@ -63,7 +63,8 @@ export default async function ResourcePage({ params, searchParams }: PageProps<"
   if (!r) notFound();
 
   // The slot picker is a plain GET form, so the summary below is always computed on the server.
-  const nextHour = new Date(Math.ceil(snap.now.getTime() / 3_600_000) * 3_600_000);
+  const IST_OFFSET = 330 * 60_000; // whole hours in campus time, not UTC (IST is UTC+5:30)
+  const nextHour = new Date(Math.ceil((snap.now.getTime() + IST_OFFSET) / 3_600_000) * 3_600_000 - IST_OFFSET);
   const defaultEnd = addMinutes(nextHour, r.rateUnit === "day" ? 24 * 60 : 60);
   const slotInput = {
     startDate: one(sp.start_date) ?? istDate(nextHour),
