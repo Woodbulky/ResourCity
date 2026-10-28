@@ -30,10 +30,19 @@ export interface NavArea {
   items: NavItem[];
 }
 
-const activeHref = (items: NavItem[], path: string) =>
-  items
+// Detail pages with no menu entry of their own light up the list they are opened from.
+const PARENTS: [prefix: string, href: string][] = [
+  ["/owner/bookings/", "/owner/requests"],
+  ["/manager/bookings/", "/manager/queue"],
+];
+
+const activeHref = (items: NavItem[], path: string) => {
+  const parent = PARENTS.find(([prefix]) => path.startsWith(prefix))?.[1];
+  if (parent && items.some((i) => i.href === parent)) return parent;
+  return items
     .filter((i) => path === i.href || path.startsWith(`${i.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+};
 
 export function SidebarNav({
   areas,
