@@ -7,7 +7,7 @@ import {
   bookingRulesSchema, eligibilitySchema,
   type AllocationMode, type ApprovalMode, type BookingRules, type Eligibility, type ResourceCategory, type ResourceStatus,
 } from "../contracts/resource";
-import { cardState, checkEligibility, type CardState, type EligibilityCheck } from "../domain/eligibility";
+import { cardState, checkEligibility, type CardState, type EligibilityCheck, type EligibilityStudent } from "../domain/eligibility";
 import { activeHolds, availableBalance } from "../domain/ledger";
 import { noShowStrikes } from "../domain/strikes";
 import { weekStart } from "../domain/time";
@@ -120,6 +120,24 @@ const approvalLine = (mode: ApprovalMode, allocation: AllocationMode) =>
         ? "Manager approval required"
         : "Owner approval";
 
+// The student side of checkEligibility() for one resource's organisation.
+export function eligibilityStudent(viewer: SessionViewer, snap: StudentSnapshot, orgId: string): EligibilityStudent {
+  const restriction = snap.restrictions.find((x) => x.org_id === orgId);
+  return {
+    status: viewer.status,
+    status_reason: viewer.statusReason,
+    suspended_until: viewer.suspendedUntil ? new Date(viewer.suspendedUntil) : null,
+    department: snap.profile?.department ?? null,
+    year: snap.profile?.year ?? null,
+    memberOfOrg: viewer.memberships.some((m) => m.orgId === orgId),
+    orgRestriction: restriction ? { until: new Date(restriction.until), reason: restriction.reason } : null,
+    badges: snap.badges.map((b) => ({ badge_type_id: b.badge_type_id, status: b.status, expires_at: b.expires_at ? new Date(b.expires_at) : null })),
+  };
+}
+
+export const activeBookingsAt = (snap: StudentSnapshot, resourceId: string) =>
+  snap.bookings.filter((b) => b.resource_id === resourceId && ACTIVE_STATUSES.includes(b.status)).length;
+
 // Slot-independent eligibility for a card (PRD 7). Availability and duration need a chosen
 // slot, so the card says so instead of claiming "Eligible" for a check it could not run.
 export const catalog = cache(async (viewer: SessionViewer, opts: { resourceId?: string } = {}) => {
@@ -129,29 +147,18 @@ export const catalog = cache(async (viewer: SessionViewer, opts: { resourceId?: 
   query = opts.resourceId ? query.eq("id", opts.resourceId) : query.eq("status", "active");
   const [{ data: resources }, { data: badgeTypes }] = await Promise.all([query, supabase.from("badge_types").select("id, name")]);
   const badgeNames = Object.fromEntries((badgeTypes ?? []).map((b) => [b.id, b.name]));
-  const memberOf = new Set(viewer.memberships.map((m) => m.orgId));
 
   return (resources ?? []).map((r): CatalogEntry => {
     const eligibility = eligibilitySchema.safeParse(r.eligibility).data ?? eligibilitySchema.parse({});
     const rules = bookingRulesSchema.safeParse(r.booking_rules).data ?? bookingRulesSchema.parse({});
-    const restriction = snap.restrictions.find((x) => x.org_id === r.org_id);
     const oneUnitMinutes = r.rate_unit === "day" ? 24 * 60 : 60;
     const checks = checkEligibility(
-      {
-        status: viewer.status,
-        status_reason: viewer.statusReason,
-        suspended_until: viewer.suspendedUntil ? new Date(viewer.suspendedUntil) : null,
-        department: snap.profile?.department ?? null,
-        year: snap.profile?.year ?? null,
-        memberOfOrg: memberOf.has(r.org_id),
-        orgRestriction: restriction ? { until: new Date(restriction.until), reason: restriction.reason } : null,
-        badges: snap.badges.map((b) => ({ badge_type_id: b.badge_type_id, status: b.status, expires_at: b.expires_at ? new Date(b.expires_at) : null })),
-      },
+      eligibilityStudent(viewer, snap, r.org_id),
       { eligibility, booking_rules: rules, approval_mode: r.approval_mode, badgeNames },
       { start: snap.now, end: new Date(snap.now.getTime() + oneUnitMinutes * 60_000) },
       {
         now: snap.now,
-        activeBookingsHere: snap.bookings.filter((b) => b.resource_id === r.id && ACTIVE_STATUSES.includes(b.status)).length,
+        activeBookingsHere: activeBookingsAt(snap, r.id),
         availableCredits: snap.available,
         cost: r.base_rate, // one rate unit: the smallest booking
         noShowStrikes: snap.strikes,

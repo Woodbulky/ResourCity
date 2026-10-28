@@ -239,3 +239,7 @@ export function waited(from: string | Date, now: Date): string {
   if (hours < 48) return `${hours} hr`;
   return `${Math.round(hours / 24)} days`;
 }
+
+// Text input / select styling shared by every form.
+export const field =
+  "h-10 w-full rounded-[10px] border border-line-strong bg-paper px-3 text-sm focus:border-moss focus:outline-none focus:ring-3 focus:ring-moss/20";

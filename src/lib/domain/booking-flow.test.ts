@@ -29,7 +29,7 @@ describe("bookable hours", () => {
 
 const check = (key: EligibilityCheck["key"], result: EligibilityCheck["result"]): EligibilityCheck => ({ key, result, reason: key, fix: null });
 const allPass = [check("account_verified", "pass"), check("slot_available", "pass")];
-const instant = { approval_mode: "owner", allocation_mode: "instant", manager_approval: false } as const;
+const instant: Parameters<typeof planSubmission>[1] = { approval_mode: "owner", allocation_mode: "instant", manager_approval: false };
 
 describe("submission routing", () => {
   const plan = (checks: EligibilityCheck[], r = instant, cutoffPassed = false) => planSubmission(checks, r, { cutoffPassed });
@@ -53,7 +53,7 @@ describe("submission routing", () => {
     expect(plan([check("credits", "block"), check("slot_available", "block")])).toEqual({ ok: false, error: "credits" });
   });
   it("holds batch requests until the cutoff, then works first-come-first-served", () => {
-    const batch = { ...instant, allocation_mode: "batch" } as const;
+    const batch = { ...instant, allocation_mode: "batch" as const };
     expect(plan(allPass, batch)).toMatchObject({ ok: true, plan: { event: "submit_batch" } });
     expect(plan(allPass, batch, true)).toMatchObject({ ok: true, plan: { event: "submit_approval" } });
   });

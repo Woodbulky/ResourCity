@@ -4,15 +4,20 @@ import {
   ArrowLeft, Ban, CalendarClock, Camera, CircleAlert, CircleCheck, ClipboardCheck, HardHat, MapPin, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
+import { addMinutes } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { cn } from "cn";
+import { RequestForm } from "@/components/booking-forms";
 import { CARD_STATES } from "@/components/resource-card";
 import { CATEGORIES } from "@/components/category";
-import { formatWhen, rateLabel, sentence } from "@/components/format";
+import { formatSlot, formatWhen, rateLabel, sentence } from "@/components/format";
 import { ResourceCover } from "@/components/resource-cover";
 import { Button } from "@/components/ui/button";
-import { ComingNext, Flag, Panel, PanelHeading } from "@/components/ui/kit";
+import { field, Flag, Panel, PanelHeading } from "@/components/ui/kit";
 import { checklistSchema, safetyRulesSchema } from "@/lib/contracts/resource";
 import type { CheckKey, CheckResult } from "@/lib/domain/eligibility";
+import { APP_TIMEZONE, istDate } from "@/lib/domain/time";
+import { evaluateRequest, parseSlot, type RequestEvaluation, type SlotInput as SlotFields } from "@/lib/server/requests";
 import { createClient } from "@/lib/server/supabase";
 import { approvalLine, catalog, studentSnapshot } from "@/lib/server/student";
 import { requireViewer } from "@/lib/server/viewer";
@@ -48,12 +53,27 @@ function fieldValue(v: unknown): string {
   return String(v);
 }
 
-export default async function ResourcePage({ params }: PageProps<"/student/browse/[id]">) {
-  const { id } = await params;
+const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+
+export default async function ResourcePage({ params, searchParams }: PageProps<"/student/browse/[id]">) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   const viewer = await requireViewer();
   const [entries, snap] = await Promise.all([catalog(viewer, { resourceId: id }), studentSnapshot(viewer)]);
   const r = entries[0];
   if (!r) notFound();
+
+  // The slot picker is a plain GET form, so the summary below is always computed on the server.
+  const nextHour = new Date(Math.ceil(snap.now.getTime() / 3_600_000) * 3_600_000);
+  const defaultEnd = addMinutes(nextHour, r.rateUnit === "day" ? 24 * 60 : 60);
+  const slotInput = {
+    startDate: one(sp.start_date) ?? istDate(nextHour),
+    startTime: one(sp.start_time) ?? formatInTimeZone(nextHour, APP_TIMEZONE, "HH:mm"),
+    endDate: one(sp.end_date) ?? istDate(defaultEnd),
+    endTime: one(sp.end_time) ?? formatInTimeZone(defaultEnd, APP_TIMEZONE, "HH:mm"),
+  };
+  const picked = one(sp.start_date) ? parseSlot(slotInput) : null;
+  const ev = picked ? await evaluateRequest(viewer, id, picked) : null;
+  const shownChecks = ev && !ev.problem ? ev.checks : r.checks;
 
   const supabase = await createClient();
   const [{ data: extra }, { data: windows }, { data: blackouts }] = await Promise.all([
@@ -131,18 +151,22 @@ export default async function ResourcePage({ params }: PageProps<"/student/brows
             <PanelHeading
               id="eligibility-heading"
               title="Before you request"
-              description="Checked against your account right now. Availability and cost are checked when you pick a slot."
+              description={
+                ev && !ev.problem
+                  ? `Checked for ${formatSlot(picked!.start, picked!.end)} against your account right now.`
+                  : "Checked against your account right now. Availability and cost are checked when you pick a slot."
+              }
               aside={<Flag tone={state.tone} icon={state.icon}>{state.label}</Flag>}
             />
             <ul className="divide-y divide-line">
-              {r.checks.map((c) => {
+              {shownChecks.map((c) => {
                 const res = RESULT[c.result];
                 return (
                   <li key={c.key} className="flex items-start gap-3 px-5 py-3">
                     <res.icon aria-hidden className={cn("mt-0.5 size-5 shrink-0", res.cls)} />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">
-                        {CHECK_LABELS[c.key]} <span className="sr-only">: {res.word}</span>
+                        {c.key === "credits" && ev ? "Credits" : CHECK_LABELS[c.key]} <span className="sr-only">: {res.word}</span>
                       </p>
                       {c.reason && <p className="text-sm text-ink-soft">{c.reason}</p>}
                       {c.result !== "pass" && c.fix && <p className="mt-0.5 text-sm font-medium text-ink">What to do: {c.fix.startsWith("/") ? "finish verification" : c.fix}</p>}
@@ -253,16 +277,29 @@ export default async function ResourcePage({ params }: PageProps<"/student/brows
                     {r.status === "unsafe" ? "Marked unsafe while a Manager reviews it." : `Currently ${r.status.replaceAll("_", " ")}.`}
                   </p>
                 ) : canRequest ? (
-                  <Button size="lg" disabled className="w-full">
-                    {r.checks.some((c) => c.result === "review" && c.key !== "no_show_strikes") ? "Request exception" : "Pick a slot and request"}
-                  </Button>
+                  <>
+                    <form method="get" className="grid gap-2 rounded-xl bg-paper p-3" aria-label="Pick a slot">
+                      <p className="text-sm font-semibold">Pick a slot <span className="font-normal text-ink-soft">(campus time)</span></p>
+                      <div className="grid grid-cols-[1fr_auto] gap-2">
+                        <label className="sr-only" htmlFor="start_date">Start date</label>
+                        <input id="start_date" name="start_date" type="date" required defaultValue={slotInput.startDate} className={field} />
+                        <label className="sr-only" htmlFor="start_time">Start time</label>
+                        <input id="start_time" name="start_time" type="time" required step={900} defaultValue={slotInput.startTime} className={field} />
+                        <label className="sr-only" htmlFor="end_date">End date</label>
+                        <input id="end_date" name="end_date" type="date" required defaultValue={slotInput.endDate} className={field} />
+                        <label className="sr-only" htmlFor="end_time">End time</label>
+                        <input id="end_time" name="end_time" type="time" required step={900} defaultValue={slotInput.endTime} className={field} />
+                      </div>
+                      <Button type="submit" variant="outline"><CalendarClock aria-hidden /> Check this slot</Button>
+                    </form>
+                    {picked === null && one(sp.start_date) && <p role="alert" className="text-sm font-semibold text-danger-fg">Enter a valid start and end.</p>}
+                    {ev?.problem && <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm font-semibold text-danger-fg">{ev.problem}</p>}
+                    {ev && !ev.problem && <RequestSummary ev={ev} slot={slotInput} resourceId={id} />}
+                  </>
                 ) : (
                   <p className="rounded-lg bg-paper px-3 py-2 text-sm">
                     <strong className="font-semibold">{state.label}.</strong> {fix && !fix.startsWith("/") ? fix : r.headline}
                   </p>
-                )}
-                {!unavailable && canRequest && (
-                  <ComingNext phase={3}>The slot calendar, purpose and submit flow connect to the booking engine.</ComingNext>
                 )}
                 {fix === "/pending" && (
                   <Link href="/pending" className="text-sm font-semibold text-moss hover:underline">See your verification status →</Link>
@@ -277,5 +314,47 @@ export default async function ResourcePage({ params }: PageProps<"/student/brows
         </aside>
       </div>
     </>
+  );
+}
+
+const LANDS: Record<string, (ev: RequestEvaluation) => string> = {
+  submit_auto: () => "Approved instantly; credits are held now",
+  submit_approval: (ev) => (ev.plan.ok && ev.plan.plan.approverRole === "manager" ? "Goes to the organisation Manager" : "Goes to the Owner for approval"),
+  submit_waitlist: () => "Every unit is taken, so you join the waitlist",
+  submit_batch: (ev) => `Scored with every request at ${ev.cutoffAt ? formatWhen(ev.cutoffAt) : "the cutoff"}`,
+};
+
+// Request summary before submit (PRD 7): cost, hold, balance after hold, approval path, allocation
+// and cutoff, grace and the no-show rule.
+function RequestSummary({ ev, slot, resourceId }: { ev: RequestEvaluation; slot: SlotFields; resourceId: string }) {
+  if (!ev.plan.ok)
+    return <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-sm font-semibold text-danger-fg">{ev.plan.error}</p>;
+  const { plan } = ev.plan;
+  const holdsNow = plan.event === "submit_auto";
+  const rows: [string, string][] = [
+    ["Credit cost", ev.cost === 0 ? "Free" : `${ev.cost} credits`],
+    ["Held", holdsNow ? `${ev.cost} now` : `${ev.cost} once approved`],
+    ["Balance after hold", `${ev.available - ev.cost} of ${ev.available}`],
+    ["What happens", LANDS[plan.event]!(ev)],
+    ["Pickup grace", `${ev.grace} min after the start`],
+  ];
+  const strikes = ev.policy.values.strikes;
+  return (
+    <div className="grid gap-3">
+      <dl className="grid gap-2 rounded-xl bg-paper p-3 text-sm">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-3"><dt className="text-ink-soft">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>
+        ))}
+      </dl>
+      <p className="text-xs leading-relaxed text-ink-soft">
+        Not collected within the grace period counts as a no-show. A {ordinal(strikes.limit + 1)} no-show in {strikes.window_days} days forfeits the hold.
+      </p>
+      <RequestForm
+        resourceId={resourceId}
+        slot={slot}
+        exception={plan.isException}
+        submitLabel={plan.isException ? "Request exception" : plan.event === "submit_waitlist" ? "Join waitlist" : plan.event === "submit_auto" ? "Book now" : "Send request"}
+      />
+    </div>
   );
 }
