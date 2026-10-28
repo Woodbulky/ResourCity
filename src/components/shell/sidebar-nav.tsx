@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell, Building2, CalendarDays, Check, ClipboardList, Clock, Ellipsis, Gauge, LayoutGrid, LogOut, PackageOpen,
-  ScrollText, Search, ShieldAlert, ShieldCheck, Users, Wallet, type LucideIcon,
+  ScanLine, ScrollText, Search, ShieldAlert, ShieldCheck, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import type { AppArea } from "@/lib/domain/access";
 import { Avatar } from "../avatar";
@@ -13,7 +13,7 @@ import { Wordmark } from "../brand";
 export const NAV_ICONS = {
   grid: LayoutGrid, search: Search, calendar: CalendarDays, wallet: Wallet, bell: Bell, clipboard: ClipboardList,
   handover: PackageOpen, building: Building2, gauge: Gauge, shield: ShieldAlert, check: Check, users: Users,
-  scroll: ScrollText, clock: Clock, verified: ShieldCheck,
+  scroll: ScrollText, clock: Clock, verified: ShieldCheck, scan: ScanLine,
 } satisfies Record<string, LucideIcon>;
 export type NavIcon = keyof typeof NAV_ICONS;
 

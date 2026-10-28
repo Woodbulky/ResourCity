@@ -147,3 +147,7 @@ export function DoorCheckinForm({ token }: { token: string }) {
     </form>
   );
 }
+
+export function PrintButton() {
+  return <Button type="button" onClick={() => window.print()} className="print:hidden">Print</Button>;
+}

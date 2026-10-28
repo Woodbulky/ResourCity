@@ -1,18 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Camera, ClipboardCheck, Coins, QrCode, Scale, Target, UserRound } from "lucide-react";
+import { ArrowLeft, Camera, ClipboardCheck, Coins, QrCode, Scale, ScanLine, Target, UserRound, Users } from "lucide-react";
+import QRCode from "qrcode";
 import { cn } from "cn";
 import { Avatar } from "@/components/avatar";
 import { BookingCard, studentNote, type BookingRow } from "@/components/booking-list";
 import { formatWhen, sentence } from "@/components/format";
 import { Timeline } from "@/components/timeline";
-import { Button } from "@/components/ui/button";
+import { AckForm, CancelForm, CompleteReturnForm, DecisionForm } from "@/components/booking-forms";
+import { StatusChip } from "@/components/status-chip";
+import { buttonVariants } from "@/components/ui/button";
 import { ComingNext, Panel, PanelHeading } from "@/components/ui/kit";
+import { ACTIVE_STATUSES } from "@/lib/contracts/booking";
 import type { ScoreBreakdown } from "@/lib/domain/priority";
+import { appNow } from "@/lib/server/clock";
+import { bookingQrUrl } from "@/lib/server/requests";
 import { createClient } from "@/lib/server/supabase";
 
 const FIELDS =
-  "id, status, start_at, end_at, created_at, waitlist_position, offer_expires_at, cutoff_at, status_reason, approver_role, credit_hold, credit_charged, priority_score, score_breakdown, allocation_rule, purpose_category, purpose_text, purpose_verified, is_exception, exception_reason, grace_minutes, picked_up_at, returned_at, user_id, profiles!bookings_user_id_fkey(full_name, department, year), resources(name, category, location, organizations(name))" as const;
+  "id, status, start_at, end_at, created_at, waitlist_position, offer_expires_at, cutoff_at, status_reason, approver_role, credit_hold, credit_charged, priority_score, score_breakdown, allocation_rule, purpose_category, purpose_text, purpose_verified, is_exception, exception_reason, grace_minutes, picked_up_at, returned_at, user_id, resource_id, profiles!bookings_user_id_fkey(full_name, department, year, status), resources(name, category, location, organizations(name))" as const;
 
 const FACTORS: [keyof Omit<ScoreBreakdown, "total">, string, number][] = [
   ["usage", "Recent usage", 40],
@@ -47,6 +53,40 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
       : Promise.resolve({ data: null }),
   ]);
   if (!b) notFound();
+  const now = await appNow();
+  const staff = as !== "student";
+  const [qr, photoUrls, history, competing] = await Promise.all([
+    as === "student" ? bookingQrUrl(b) : null,
+    signedPhotos(supabase, reports ?? []),
+    staff
+      ? Promise.all([
+          supabase.from("bookings").select("status, end_at, returned_at").eq("user_id", b.user_id).neq("id", b.id),
+          supabase.from("user_badges").select("badge_types(name)").eq("user_id", b.user_id).eq("status", "verified"),
+        ])
+      : null,
+    staff
+      ? supabase
+          .from("bookings")
+          .select("id, status, start_at, profiles!bookings_user_id_fkey(full_name)")
+          .eq("resource_id", b.resource_id)
+          .neq("id", b.id)
+          .in("status", ACTIVE_STATUSES)
+          .lt("start_at", b.end_at)
+          .gt("end_at", b.start_at)
+      : null,
+  ]);
+  const qrSvg = qr ? await QRCode.toString(qr.url, { type: "svg", margin: 1, errorCorrectionLevel: "M" }) : null;
+  const past = history?.[0].data ?? [];
+  const stats = [
+    ["Completed", past.filter((x) => x.status === "completed").length],
+    ["On time", past.filter((x) => x.status === "completed" && x.returned_at && x.returned_at <= x.end_at).length],
+    ["No-shows", past.filter((x) => x.status === "no_show").length],
+  ] as const;
+  const toAck = (reports ?? []).filter((r) => r.owner_signed_at && !r.student_ack_at);
+  const studentCanCancel =
+    as === "student" &&
+    (["pending_allocation", "pending_approval", "waitlisted", "offered"].includes(b.status) ||
+      (b.status === "approved" && new Date(b.start_at) > now));
 
   const back = as === "student" ? { href: "/student/bookings", label: "My bookings" } : as === "owner" ? { href: "/owner/requests", label: "Requests" } : { href: "/manager/queue", label: "Decision queue" };
   const breakdown = b.score_breakdown as unknown as ScoreBreakdown | null;
@@ -102,7 +142,7 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                 {(["checkout", "return"] as const).map((phase) => {
                   const rep = reports.find((r) => r.phase === phase);
                   const items = (rep?.checklist_results ?? []) as { item: string; ok: boolean; note?: string }[];
-                  const photos = (rep?.photos ?? []) as { shot: string }[];
+                  const photos = (rep?.photos ?? []) as { shot: string; path: string }[];
                   return (
                     <div key={phase} className="rounded-xl border border-line p-4">
                       <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -116,6 +156,21 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                               <li key={i.item} className={cn(!i.ok && "font-semibold text-danger-fg")}>{i.ok ? "✓" : "!"} {i.item}{i.note ? ` — ${i.note}` : ""}</li>
                             ))}
                           </ul>
+                          {photos.some((ph) => photoUrls[ph.path]) && (
+                            <ul className="mt-3 grid grid-cols-3 gap-2">
+                              {photos.map((ph) =>
+                                photoUrls[ph.path] ? (
+                                  <li key={ph.path}>
+                                    <a href={photoUrls[ph.path]} target="_blank" rel="noreferrer" className="block">
+                                      {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
+                                      <img src={photoUrls[ph.path]} alt={ph.shot} className="aspect-square w-full rounded-lg border border-line object-cover" />
+                                    </a>
+                                    <span className="mt-0.5 block truncate text-[0.6875rem] text-ink-soft">{ph.shot}</span>
+                                  </li>
+                                ) : null,
+                              )}
+                            </ul>
+                          )}
                           <p className="mt-2 text-xs text-ink-soft">
                             {photos.length} photo{photos.length === 1 ? "" : "s"} · Owner {rep.owner_signed_at ? "signed" : "not signed"} · student {rep.student_ack_at ? "acknowledged" : "not yet acknowledged"}
                           </p>
@@ -132,15 +187,46 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
         </div>
 
         <aside className="space-y-4">
-          {as === "student" && (b.status === "approved" || b.status === "checked_out" || b.status === "overdue") && (
+          {qr && qrSvg && (
             <Panel aria-labelledby="qr-heading">
-              <PanelHeading id="qr-heading" title={b.status === "approved" ? "Pickup QR" : "Return QR"} aside={<QrCode aria-hidden className="size-5 text-moss" />} />
+              <PanelHeading id="qr-heading" title={qr.phase === "pickup" ? "Pickup QR" : "Return QR"} aside={<QrCode aria-hidden className="size-5 text-moss" />} />
               <div className="grid justify-items-center gap-3 p-5 text-center">
-                <span aria-hidden className="grid size-36 place-items-center rounded-2xl border-2 border-dashed border-line-strong bg-cream text-ink-soft">
-                  <QrCode className="size-14 opacity-40" />
-                </span>
-                <p className="text-sm text-ink-soft">Signed and time-limited: valid from 15 minutes before the start until the end of the grace period.</p>
-                <ComingNext phase={3}>Signed QR tokens and the Owner scanner.</ComingNext>
+                <div
+                  role="img"
+                  aria-label={`${qr.phase === "pickup" ? "Pickup" : "Return"} QR code`}
+                  className="size-48 rounded-2xl border border-line bg-white p-2 [&_svg]:size-full"
+                  dangerouslySetInnerHTML={{ __html: qrSvg }}
+                />
+                <p className="text-sm text-ink-soft">
+                  Show this to the Owner.{" "}
+                  {now < qr.validFrom ? <>It opens at <strong>{formatWhen(qr.validFrom)}</strong>.</> : <>Valid until <strong>{formatWhen(qr.validUntil)}</strong>.</>}
+                </p>
+                <details className="w-full text-left text-xs">
+                  <summary className="cursor-pointer font-semibold text-moss">Can&apos;t scan? Show the code</summary>
+                  <p className="mt-2 break-all rounded-lg bg-wash p-2 font-mono">{qr.url}</p>
+                </details>
+              </div>
+            </Panel>
+          )}
+
+          {(studentCanCancel || (as === "student" && toAck.length > 0)) && (
+            <Panel aria-labelledby="next-heading">
+              <PanelHeading id="next-heading" title="Your next step" />
+              <div className="grid gap-4 p-5 text-sm">
+                {as === "student" &&
+                  toAck.map((r) => (
+                    <div key={r.phase} className="grid gap-2">
+                      <p>The Owner signed the {r.phase === "checkout" ? "pickup" : "return"} condition record. Check it, then acknowledge it.</p>
+                      <AckForm bookingId={b.id} phase={r.phase} />
+                    </div>
+                  ))}
+                {studentCanCancel && (
+                  <CancelForm
+                    bookingId={b.id}
+                    label={b.status === "approved" ? "I can't make it (free before the start, no strike)" : "Withdraw this request"}
+                    defaultReason={b.status === "approved" ? "I can't make it" : "No longer needed"}
+                  />
+                )}
               </div>
             </Panel>
           )}
@@ -152,9 +238,43 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                 <Avatar name={person.full_name} className="size-11" />
                 <div>
                   <p className="font-semibold">{person.full_name}</p>
-                  <p className="text-sm text-ink-soft">{person.department ?? "Department not set"}{person.year ? ` · Year ${person.year}` : ""}</p>
+                  <p className="text-sm text-ink-soft">
+                    {person.department ?? "Department not set"}
+                    {person.year ? ` · Year ${person.year}` : ""} · {sentence(person.status)}
+                  </p>
                 </div>
               </div>
+              <dl className="grid grid-cols-3 border-t border-line text-center text-sm">
+                {stats.map(([k, v]) => (
+                  <div key={k} className="px-2 py-3">
+                    <dt className="text-xs text-ink-soft">{k}</dt>
+                    <dd className="font-semibold">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              {!!history?.[1].data?.length && (
+                <p className="border-t border-line px-5 py-3 text-sm">Badges: {history[1].data.map((x) => x.badge_types?.name).join(", ")}</p>
+              )}
+              <p className="border-t border-line px-5 py-2 text-xs text-ink-soft">History within your organisation.</p>
+            </Panel>
+          )}
+
+          {staff && !!competing?.data?.length && (
+            <Panel aria-labelledby="competing-heading">
+              <PanelHeading
+                id="competing-heading"
+                title="Competing requests"
+                description="Other active bookings overlapping this slot."
+                aside={<Users aria-hidden className="size-5 text-moss" />}
+              />
+              <ul className="divide-y divide-line">
+                {competing.data.map((c) => (
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+                    <span>{c.profiles?.full_name ?? "Student"} · {formatWhen(c.start_at)}</span>
+                    <StatusChip status={c.status} />
+                  </li>
+                ))}
+              </ul>
             </Panel>
           )}
 
@@ -208,22 +328,32 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
             </Panel>
           )}
 
-          {as !== "student" && STAFF_NEXT[b.status] && (
+          {staff && STAFF_NEXT[b.status] && (
             <Panel aria-labelledby="decide-heading">
-              <PanelHeading id="decide-heading" title="Your decision" />
+              <PanelHeading id="decide-heading" title="Your decision" description={STAFF_NEXT[b.status]} />
               <div className="grid gap-3 p-5">
-                <div className="flex flex-wrap gap-2">
-                  {b.status === "pending_approval" ? (
-                    <>
-                      <Button disabled>Approve</Button>
-                      <Button variant="outline" disabled>Waitlist</Button>
-                      <Button variant="destructive" disabled>Reject with reason</Button>
-                    </>
+                {b.status === "pending_approval" ? (
+                  b.approver_role === "manager" && as === "owner" ? (
+                    <p className="rounded-lg bg-pending-bg px-3 py-2 text-sm text-pending-fg">Waiting for Manager: this request needs the organisation Manager.</p>
                   ) : (
-                    <Button disabled>{b.status === "approved" ? "Start handover" : b.status === "under_review" ? "Decide dispute" : "Record return"}</Button>
-                  )}
-                </div>
-                <ComingNext phase={b.status === "under_review" ? 5 : 3}>Every decision runs through transitionBooking() with a reason and an audit event.</ComingNext>
+                    <DecisionForm bookingId={b.id} as={as} />
+                  )
+                ) : b.status === "approved" ? (
+                  <Link href="/owner/scan" className={buttonVariants({ className: "w-fit" })}>
+                    <ScanLine aria-hidden /> Scan pickup QR
+                  </Link>
+                ) : b.status === "checked_out" || b.status === "overdue" ? (
+                  <Link href={`/${as}/bookings/${b.id}/handover?phase=return`} className={buttonVariants({ className: "w-fit" })}>
+                    <Camera aria-hidden /> Record return
+                  </Link>
+                ) : b.status === "returned" ? (
+                  <>
+                    <CompleteReturnForm bookingId={b.id} as={as} />
+                    <ComingNext phase={5}>Raise damage for a Manager to decide, with AI condition flags.</ComingNext>
+                  </>
+                ) : (
+                  <ComingNext phase={5}>Dispute decisions with the student&apos;s response.</ComingNext>
+                )}
               </div>
             </Panel>
           )}
@@ -231,4 +361,15 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
       </div>
     </>
   );
+}
+
+// Short-lived signed URLs for the condition photos this viewer may read (storage RLS decides).
+async function signedPhotos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  reports: { photos: unknown }[],
+): Promise<Record<string, string>> {
+  const paths = reports.flatMap((r) => ((r.photos ?? []) as { path?: string }[]).flatMap((ph) => (ph.path ? [ph.path] : [])));
+  if (!paths.length) return {};
+  const { data } = await supabase.storage.from("condition-photos").createSignedUrls(paths, 600);
+  return Object.fromEntries((data ?? []).filter((d) => d.signedUrl && d.path).map((d) => [d.path!, d.signedUrl as string]));
 }

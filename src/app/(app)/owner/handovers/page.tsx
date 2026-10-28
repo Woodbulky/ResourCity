@@ -1,7 +1,8 @@
 import { PackageOpen, ScanLine } from "lucide-react";
 import { BookingCard, type BookingRow } from "@/components/booking-list";
-import { Button } from "@/components/ui/button";
-import { ComingNext, EmptyState, PageHeading, TabRail } from "@/components/ui/kit";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState, PageHeading, TabRail } from "@/components/ui/kit";
 import { ownerDesk } from "@/lib/server/queues";
 import { requireViewer } from "@/lib/server/viewer";
 
@@ -32,11 +33,8 @@ export default async function Handovers({ searchParams }: PageProps<"/owner/hand
         eyebrow={`${d.orgs.map((o) => o.orgName).join(" · ")} · handover desk`}
         title="A careful handover starts here."
         description="Scan, check together and give every item a clear beginning and end. Both of you sign the condition record."
-        actions={<Button disabled><ScanLine aria-hidden /> Open scanner</Button>}
+        actions={<Link href="/owner/scan" className={buttonVariants()}><ScanLine aria-hidden /> Open scanner</Link>}
       />
-      <div className="mb-5 max-w-xl">
-        <ComingNext phase={3}>The phone scanner, signed QR check and the photo handover screen.</ComingNext>
-      </div>
       <TabRail
         label="Handovers"
         active={tab}

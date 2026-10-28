@@ -44,6 +44,7 @@ async function buildArea(area: AppArea, v: SessionViewer, unread: number): Promi
         { href: "/student/browse", label: "Find a resource", icon: "search" },
         { href: "/student/bookings", label: "My bookings", icon: "calendar", count: count ?? 0 },
         { href: "/student/wallet", label: "Credits wallet", icon: "wallet" },
+        { href: "/student/scan", label: "Door check-in", icon: "scan" },
         notifications,
       ],
     };
@@ -58,6 +59,7 @@ async function buildArea(area: AppArea, v: SessionViewer, unread: number): Promi
         { href: "/owner", label: "Overview", icon: "grid" },
         { href: "/owner/requests", label: "Requests", icon: "clipboard", count: desk.needsReview.length },
         { href: "/owner/handovers", label: "Handovers", icon: "handover", count: desk.pickupsToday.length + desk.returnsDue.length },
+        { href: "/owner/scan", label: "Scan", icon: "scan" },
         { href: "/owner/resources", label: "My resources", icon: "building" },
         notifications,
       ],
