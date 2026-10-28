@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck, CalendarClock, CircleMinus, CirclePlus, Coins, LifeBuoy, Lock, Sparkles, UserX, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
+import { EmergencyCreditsForm } from "@/components/booking-forms";
 import { formatWhen, sentence } from "@/components/format";
 import { EmptyState, Flag, Panel, PanelHeading, PageHeading, SectionTitle } from "@/components/ui/kit";
 import type { LedgerKind } from "@/lib/domain/ledger";
@@ -114,9 +115,15 @@ export default async function WalletPage() {
         </Panel>
       </div>
 
-      {s.emergency.length > 0 && (
-        <>
-          <SectionTitle title="Emergency credit requests" description="One grant per academic year, decided by an Admin." />
+      <SectionTitle title="Emergency credits" description="One grant per academic year, decided by an Admin. Free credits, not an advance: your booking still needs normal approval." />
+      <div id="emergency" className="scroll-mt-24 space-y-4">
+        {viewer.status === "verified" && !s.emergency.some((e) => e.status === "pending" || e.status === "approved" || e.status === "partial") && (
+          <Panel aria-labelledby="emergency-heading">
+            <PanelHeading id="emergency-heading" title="Request emergency credits" description="For a real deadline when your balance falls short." />
+            <div className="p-5"><EmergencyCreditsForm cap={s.policy.values.emergency_grant_cap} /></div>
+          </Panel>
+        )}
+        {s.emergency.length > 0 && (
           <Panel>
             <ul className="divide-y divide-line">
               {s.emergency.map((e) => (
@@ -133,8 +140,8 @@ export default async function WalletPage() {
               ))}
             </ul>
           </Panel>
-        </>
-      )}
+        )}
+      </div>
 
       <SectionTitle title="Your credit story" description="Every allowance, hold, release and charge, newest first." />
       <Panel aria-labelledby="ledger-heading">

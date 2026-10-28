@@ -1,5 +1,38 @@
 # ResourCity — progress
 
+## Phase 4 — Time, fairness, credits (complete, 2026-10-29)
+
+### Acceptance
+- Migration 8 `time_fairness_credits` applied: `scheduler_tick()`, `offer_next()`, `free_units()`, the full Section 13 `queue_notifications()` (+ `notify`, `notify_staff`, `notify_admins`), `transition_booking()` v3, `report_owner_absent()`, `request_extension()` / `decide_extension()`, `request_emergency_credits()` / `decide_emergency_credits()`, `change_policy()`, `set_clock()`, helpers `policy_values()`, `ist()`, `academic_year()`. All service role only.
+- `npm test` → 45 passed (adds capacity fill, batch ranking, policy diff). `tsc`, `eslint`, `next build` pass.
+- Live: `node --env-file=.env.local scripts/phase4-check.mjs` against `next start` → 15 passed, walking the demo clock forward: the tick refuses calls without `CRON_SECRET`; only an Admin moves the clock, forward only, audited; **batch**: the seminar slot allocates at the cutoff (top request → pending Manager approval with its score, the other two waitlisted #1/#2 with "N eligible requests scored higher", rule "Batch allocation, policy v2", Prof. Kulkarni notified); **no-show**: Dev misses the court slot → `no_show`, hold released, Kabir offered (urgent notification), Tanvi moves up to #1; Kabir accepts; **overdue**: the laptop alerts at +1 h (student, Owner) and +6 h (Manager); a 3rd strike, then the 4th no-show forfeits the hold with an `auto_applied` penalty; **policy**: v3 with a diff, existing bookings stay on v2, a new request gets v3, Owners notified; a late return proposes a penalty under the booking's own v1; extension auto-approved, refused on a clash; Owner not present cancels with no strike; emergency credits → partial grant needs a reason → once per academic year; **escalation**: Owner silent 24 h → Manager (the Owner can no longer approve), Manager silent 24 h → Admin alert, never decided automatically; **Monday reset**: unused credits expire, the v3 allowance (120) arrives, a second tick is a no-op.
+- `phase1-check` 16/16 (one assertion updated: notification titles now name the resource), `phase2-check` 12/12, `phase3-check` 13/13 still pass. `scripts/phase3-pages.mjs` also renders `/admin` (demo controls, emergency decisions), `/admin/policies` (editor), the wallet emergency form and the extension form.
+
+### Built
+- **Scheduler** (PRD 2): `POST /api/cron/tick` (Bearer `CRON_SECRET`, constant-time compare) → `runScheduler()` in `src/lib/server/scheduler.ts`: TypeScript batch allocation, then `scheduler_tick()` in PRD order: expired offers, no-shows, lapses, overdue/auto-complete, overdue alerts, reminders, escalation, dispute response expiry, weekly reset. An advisory lock keeps the cron and the Admin button from overlapping; each row runs in its own subtransaction, failures are reported and never block the rest. `worker/tick.mjs` + `render.yaml` for the Render cron.
+- **Batch allocation** (PRD 8): re-runs `checkEligibility()` at the cutoff (drops with the reason), scores with `priorityScore()`, ranks with `rankRequests()`, fills capacity with `fillCapacity()`; top requests go to `pending_approval` (or `approved` on auto resources), the rest `waitlisted` in rank order. The breakdown stores rank and how many scored higher, never other students' data.
+- **Waitlist offers**: `offer_next()` runs whenever a booking stops claiming a slot (cancel, no-show, expiry, rejection, return); pending approvals keep their claim. Accept window 10/60 min from policy; the student accepts on the booking page (expired offers refused).
+- **No-shows and strikes** use the booking's own policy version; the over-limit no-show forfeits the hold and records an `auto_applied` penalty (appeals are Phase 5). Strike review now says when it lifts. **Owner not present** during the pickup window: audited against the org, booking cancelled, no strike.
+- **Overdue**: `checked_out` past the end → `overdue` (handed over) or `completed` (door check-in). Alerts at +1/+6/+24 h; the Manager queue shows overdue 6 h+ (urgent at 24 h). Reminders: pickup 30 min before; returns 24 h and 2 h before for loans over a day, else 30 min. A late return proposes a penalty (late units × rate × multiplier, booking's policy version).
+- **Escalation**: Owner → Manager after 24 h or 2 h before start; Manager → Admin after 24 h.
+- **Extensions**: student form (new end, reason, note); max duration, bookable hours, unit conflict and extra credits checked; auto resources extend at once; otherwise the Owner/Manager approves or declines with a reason on the booking page; the extra cost is held on approval.
+- **Credits**: Monday 00:00 IST reset and allowance in the tick (newly verified students get the full allowance at the next tick, closing the Phase 2 known issue). Emergency credits: wallet form (linked from the credits eligibility fix), Admin grant/partial/decline on the Admin home.
+- **Policies**: editor on `/admin/policies` → live before/after diff → reason → new version; the diff (recomputed server-side) is the audit metadata.
+- **Demo controls** on `/admin` (demo mode): +15 min, +1 h, +1 day, reset clock, run scheduler now, reset demo data. All audited.
+- **Notifications** (Section 13): student status for every transition (titles name the resource), Owners on requests, decisions, no-shows, overdue and extensions, Managers when they approve or are escalated to, Admins on escalations and emergency requests, every Owner/Manager on policy changes. Links go to each recipient's own page.
+
+### Decisions and deviations
+1. **Late offers.** PRD 8 says an offer never runs past slot start + grace, but a no-show is only detected at start + grace, so that rule would make the PRD's own "a no-show releases the slot and offers it" impossible. Offers run to `min(now + window, end − 15 min)`; if that passes the original grace, the offered booking's pickup deadline moves to the offer expiry plus its grace. Waitlisted requests lapse 15 min before the slot ends (not at the start) so they can still be offered.
+2. Reminders go straight to notifications with a dedupe key, not through audit events, so the audit log stays consequential.
+3. Escalation moves `approver_role` to `manager`; overdue alerts reuse `escalation_level`/`escalated_at` (reset to 0 when a booking turns overdue). No schema change.
+4. The weekly allowance goes to every verified non-Admin (staff can book as students). Unspent emergency grants also expire at the Monday reset.
+5. Per-category caps are not editable in the policy editor yet (the default cap is). Emergency requests take no proof upload yet.
+6. Batch capacity counts overlapping claims; exact when requests share one slot (marked `ponytail:`).
+
+### Known issues / for the architect
+- **The Render cron is not running yet.** Create it from `render.yaml` (or a Render cron job: schedule `* * * * *`, command `node worker/tick.mjs`, env `APP_URL`, `CRON_SECRET`) and add the same `CRON_SECRET` to Vercel. Until then "Run scheduler now" on `/admin` drives every job.
+- Not yet clicked through in a browser on production; the live checks ran against `next start` locally on the production database.
+
 ## Phase 3 — Core happy path (complete, 2026-10-29)
 
 ### Acceptance
@@ -128,4 +161,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 4 — time, fairness, credits (PRD 18).
+Phase 5 — trust workflows and AI (PRD 18): damage cases, penalty queue and no-show appeals, overrides, incidents, AI search parser and condition comparison.

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { addDays } from "date-fns";
-import { istDate, istInstant } from "../domain/time";
+import { formatDateTime, istDate, istInstant } from "../domain/time";
 import { appNow } from "./clock";
 import { createClient } from "./supabase";
 import type { SessionViewer } from "./viewer";
@@ -64,7 +64,7 @@ export type QueueLevel = "critical" | "urgent" | "normal";
 export interface QueueItem {
   id: string;
   level: QueueLevel;
-  kind: "Incident" | "Damage" | "Approval" | "Exception" | "Escalated" | "Dispute" | "Penalty" | "Appeal";
+  kind: "Incident" | "Damage" | "Approval" | "Exception" | "Escalated" | "Dispute" | "Penalty" | "Appeal" | "Overdue";
   title: string;
   detail: string;
   since: string;
@@ -80,7 +80,7 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
   const ids = orgIds(viewer, "manager");
   const soon = new Date(now.getTime() + 24 * 3_600_000);
 
-  const [{ data: approvals }, { data: cases }, { data: penalties }, { data: incidents }] = await Promise.all([
+  const [{ data: approvals }, { data: cases }, { data: penalties }, { data: incidents }, { data: overdue }] = await Promise.all([
     supabase
       .from("bookings")
       .select(STAFF_BOOKING_FIELDS)
@@ -105,9 +105,27 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
       .in("resources.org_id", ids)
       .neq("status", "closed")
       .order("created_at"),
+    // Overdue 6 h+ reaches the Manager; 24 h+ is flagged urgent (PRD 10).
+    supabase
+      .from("bookings")
+      .select(STAFF_BOOKING_FIELDS)
+      .in("resources.org_id", ids)
+      .eq("status", "overdue")
+      .gte("escalation_level", 2)
+      .order("end_at"),
   ]);
 
   const items: QueueItem[] = [];
+  for (const b of overdue ?? [])
+    items.push({
+      id: `overdue-${b.id}`,
+      level: b.escalation_level >= 3 ? "urgent" : "normal",
+      kind: "Overdue",
+      title: `${b.resources.name} · not returned`,
+      detail: `${b.profiles?.full_name ?? "Student"} · was due ${formatDateTime(new Date(b.end_at))}`,
+      since: b.end_at,
+      href: `/manager/bookings/${b.id}`,
+    });
   for (const i of incidents ?? [])
     items.push({
       id: `incident-${i.id}`,

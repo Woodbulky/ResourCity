@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "../contracts/api";
 import type { Json } from "../contracts/database";
-import { bookingRulesSchema } from "../contracts/resource";
-import { returnCharge } from "../domain/pricing";
+import { bookingRulesSchema, safetyRulesSchema } from "../contracts/resource";
+import { slotProblem } from "../domain/availability";
+import { creditCost, returnCharge } from "../domain/pricing";
+import { istInstant, minutesBetween } from "../domain/time";
 import { friendlyError, transitionBooking } from "./booking";
 import { appNow } from "./clock";
 import { checkQr, evaluateRequest, parseSlot } from "./requests";
@@ -214,4 +216,106 @@ export async function completeReturn(_prev: ActionResult | null, form: FormData)
   );
   const result = await transitionBooking({ bookingId, event: "complete", actor: { id: viewer.id, role }, payload: { charge } });
   return result.ok ? done(`Completed. ${charge} credits charged, ${b.credit_hold - charge} released.`) : result;
+}
+
+// ---------------------------------------------------------------------------- Phase 4: offers, absence, extensions, emergency credits
+export async function acceptOffer(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (!viewer) return SESSION_ENDED;
+  const result = await transitionBooking({ bookingId: str(form, "bookingId"), event: "accept", actor: { id: viewer.id, role: "student" } });
+  return result.ok ? done("Slot accepted. Your credits are on hold and the pickup QR is ready.") : result;
+}
+
+// "Owner not present" (PRD 10): no strike, logged against the organisation.
+export async function reportOwnerAbsent(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (!viewer) return SESSION_ENDED;
+  const { error } = await createServiceClient().rpc("report_owner_absent", { p_user: viewer.id, p_booking: str(form, "bookingId") });
+  return error ? { ok: false, error: friendlyError(error.message) } : done("Reported. No strike for you, and your credits are back.");
+}
+
+const EXT_FIELDS =
+  "start_at, end_at, user_id, resource_id, resources(approval_mode, safety_rules, booking_rules, base_rate, rate_unit, peak_multiplier)" as const;
+
+// Extra credits for moving the end (PRD 10): the cost of the longer slot minus what is already held.
+function extraCost(b: { start_at: string; end_at: string; resources: { base_rate: number; rate_unit: "hour" | "day"; peak_multiplier: number; booking_rules: unknown } | null }, newEnd: Date) {
+  const r = b.resources!;
+  const rules = bookingRulesSchema.safeParse(r.booking_rules).data ?? bookingRulesSchema.parse({});
+  const priced = { base_rate: r.base_rate, rate_unit: r.rate_unit, peak_multiplier: Number(r.peak_multiplier), peak_window: rules.peak_window };
+  const start = new Date(b.start_at);
+  return Math.max(0, creditCost(priced, start, newEnd) - creditCost(priced, start, new Date(b.end_at)));
+}
+
+export async function requestExtension(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (!viewer) return SESSION_ENDED;
+  const bookingId = str(form, "bookingId");
+  const date = str(form, "endDate");
+  const time = str(form, "endTime");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { ok: false, error: "Pick the new end date and time." };
+  const newEnd = istInstant(date, time);
+  const reason = str(form, "reason");
+  if (reason.length < 3) return { ok: false, error: "Say why you need more time." };
+
+  const supabase = await createClient();
+  const { data: b } = await supabase.from("bookings").select(EXT_FIELDS).eq("id", bookingId).maybeSingle();
+  if (!b?.resources || b.user_id !== viewer.id) return { ok: false, error: "Booking not found." };
+  const rules = bookingRulesSchema.safeParse(b.resources.booking_rules).data ?? bookingRulesSchema.parse({});
+  const safety = safetyRulesSchema.safeParse(b.resources.safety_rules).data ?? safetyRulesSchema.parse({});
+  const asked = minutesBetween(new Date(b.start_at), newEnd);
+  const overMax = rules.max_duration_minutes !== null && asked > rules.max_duration_minutes;
+  if (overMax && rules.modes.max_duration === "block")
+    return { ok: false, error: `That makes the booking longer than the ${(rules.max_duration_minutes ?? 0) / 60} h maximum.` };
+  const [{ data: windows }, { data: blackouts }] = await Promise.all([
+    supabase.from("availability_windows").select("weekday, start_time, end_time").eq("resource_id", b.resource_id),
+    supabase.from("blackouts").select("starts_at, ends_at, reason").eq("resource_id", b.resource_id),
+  ]);
+  const problem = slotProblem(new Date(b.start_at), newEnd, windows ?? [],
+    (blackouts ?? []).map((x) => ({ starts_at: new Date(x.starts_at), ends_at: new Date(x.ends_at), reason: x.reason })));
+  if (problem) return { ok: false, error: problem };
+
+  // Auto-approve resources extend at once when within limits; otherwise the Owner (or Manager) decides.
+  const auto = b.resources.approval_mode === "auto" && !safety.manager_approval && !overMax;
+  const { data, error } = await createServiceClient().rpc("request_extension", {
+    p_user: viewer.id, p_booking: bookingId, p_new_end: newEnd.toISOString(), p_reason: reason,
+    p_note: str(form, "note"), p_extra: extraCost(b, newEnd), p_auto: auto,
+  });
+  if (error) return { ok: false, error: friendlyError(error.message) };
+  return done(data.status === "approved" ? "Extended. The new end time is in force." : "Extension requested. The original end time stays until it is approved.");
+}
+
+export async function decideExtension(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (!viewer) return SESSION_ENDED;
+  const bookingId = str(form, "bookingId");
+  const role = await staffRole(viewer, bookingId, str(form, "as"));
+  if (!role) return { ok: false, error: "You are not staff of this resource's organisation." };
+  const approve = str(form, "decision") === "approve";
+  const reason = str(form, "reason");
+  if (!approve && reason.length < 3) return { ok: false, error: "A reason is required; the student will see it." };
+  const db = createServiceClient();
+  const [{ data: b }, { data: x }] = await Promise.all([
+    db.from("bookings").select(EXT_FIELDS).eq("id", bookingId).single(),
+    db.from("extension_requests").select("id, new_end_at").eq("id", str(form, "extensionId")).eq("booking_id", bookingId).single(),
+  ]);
+  if (!b || !x) return { ok: false, error: "Extension request not found." };
+  const { error } = await db.rpc("decide_extension", {
+    p_ext: x.id, p_actor: viewer.id, p_role: role, p_approve: approve, p_reason: reason,
+    p_extra: approve ? extraCost(b, new Date(x.new_end_at)) : 0,
+  });
+  if (error) return { ok: false, error: friendlyError(error.message) };
+  return done(approve ? "Extension approved." : "Extension declined.");
+}
+
+// Emergency credits (PRD 9): one grant per academic year, decided by an Admin.
+export async function requestEmergencyCredits(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (!viewer) return SESSION_ENDED;
+  const amount = Number(str(form, "amount"));
+  if (!Number.isInteger(amount) || amount < 1) return { ok: false, error: "Enter a whole number of credits." };
+  const { error } = await createServiceClient().rpc("request_emergency_credits", {
+    p_user: viewer.id, p_booking: str(form, "bookingId") || null, p_amount: amount,
+    p_reason: str(form, "reason"), p_urgency: str(form, "urgency"),
+  });
+  return error ? { ok: false, error: friendlyError(error.message) } : done("Sent to the Admin. You will be notified of the decision.");
 }

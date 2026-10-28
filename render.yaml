@@ -1,0 +1,13 @@
+# Render Blueprint: the scheduler tick (PRD 2). Set APP_URL and CRON_SECRET in the Render dashboard.
+services:
+  - type: cron
+    name: resourcity-tick
+    runtime: node
+    schedule: "* * * * *"
+    buildCommand: "true"
+    startCommand: node worker/tick.mjs
+    envVars:
+      - key: APP_URL
+        value: https://resour-city.vercel.app
+      - key: CRON_SECRET
+        sync: false

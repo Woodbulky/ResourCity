@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BellRing, Building2, CircleCheck, Clock, LifeBuoy, ScrollText, ShieldCheck, Siren, Users } from "lucide-react";
+import { DemoControls, EmergencyDecisionForm } from "@/components/admin-forms";
 import { formatWhen } from "@/components/format";
 import { QueueRow } from "@/components/staff";
 import { buttonVariants } from "@/components/ui/button";
@@ -62,14 +63,17 @@ export default async function AdminHome() {
                   primary
                 />
               ))}
-              {q.emergency.slice(0, 3).map((e) => (
-                <li key={e.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                  <span className="grid size-9 place-items-center rounded-full bg-info-bg text-info-fg"><LifeBuoy aria-hidden className="size-4" /></span>
-                  <span className="grid min-w-0 flex-1">
-                    <strong className="truncate text-sm font-semibold">{e.profiles?.full_name ?? "Student"} · {e.amount} emergency credits</strong>
-                    <span className="truncate text-sm text-ink-soft">{e.urgency === "high" ? "Urgent · " : ""}{e.reason}</span>
-                  </span>
-                  <span className="text-xs text-ink-soft">{formatWhen(e.created_at)}</span>
+              {q.emergency.map((e) => (
+                <li key={e.id} className="grid gap-3 px-5 py-3.5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="grid size-9 place-items-center rounded-full bg-info-bg text-info-fg"><LifeBuoy aria-hidden className="size-4" /></span>
+                    <span className="grid min-w-0 flex-1">
+                      <strong className="text-sm font-semibold">{e.profiles?.full_name ?? "Student"} · {e.amount} emergency credits</strong>
+                      <span className="text-sm text-ink-soft">{e.urgency === "high" ? "Urgent · " : ""}{e.reason}</span>
+                    </span>
+                    <span className="text-xs text-ink-soft">{formatWhen(e.created_at)}</span>
+                  </div>
+                  <EmergencyDecisionForm requestId={e.id} amount={e.amount} cap={v.emergency_grant_cap} />
                 </li>
               ))}
             </ul>
@@ -98,6 +102,18 @@ export default async function AdminHome() {
           <PanelFooterLink href="/admin/policies">Review campus policies</PanelFooterLink>
         </Panel>
       </section>
+
+      {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+        <Panel aria-labelledby="demo-heading" className="mt-6">
+          <PanelHeading
+            id="demo-heading"
+            title="Demo controls"
+            description={`Campus time is ${formatWhen(now)}. Every change is audited; the scheduler also runs every minute.`}
+            aside={<Clock aria-hidden className="size-5 text-moss" />}
+          />
+          <DemoControls />
+        </Panel>
+      )}
 
       <SectionTitle title="Campus, at a glance" description="Shared resources are doing more, together." />
       <div className="grid gap-3 sm:grid-cols-3">

@@ -1358,6 +1358,43 @@ export type Database = {
         Returns: undefined
       }
       app_now: { Args: never; Returns: string }
+      // Phase 4 (migration 8), added by hand in generated form.
+      change_policy: {
+        Args: { p_admin: string; p_diff: Json; p_reason: string; p_values: Json }
+        Returns: number
+      }
+      decide_emergency_credits: {
+        Args: { p_admin: string; p_grant: number; p_reason: string; p_request: string }
+        Returns: Database["public"]["Tables"]["emergency_credit_requests"]["Row"]
+      }
+      decide_extension: {
+        Args: { p_actor: string; p_approve: boolean; p_ext: string; p_extra: number; p_reason: string; p_role: string }
+        Returns: Database["public"]["Tables"]["extension_requests"]["Row"]
+      }
+      offer_next: { Args: { p_resource: string }; Returns: number }
+      policy_values: { Args: { p_version?: string }; Returns: Json }
+      report_owner_absent: {
+        Args: { p_booking: string; p_user: string }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      request_emergency_credits: {
+        Args: { p_amount: number; p_booking: string | null; p_reason: string; p_urgency: string; p_user: string }
+        Returns: Database["public"]["Tables"]["emergency_credit_requests"]["Row"]
+      }
+      request_extension: {
+        Args: {
+          p_auto: boolean
+          p_booking: string
+          p_extra: number
+          p_new_end: string
+          p_note: string
+          p_reason: string
+          p_user: string
+        }
+        Returns: Database["public"]["Tables"]["extension_requests"]["Row"]
+      }
+      scheduler_tick: { Args: never; Returns: Json }
+      set_clock: { Args: { p_admin: string; p_advance_seconds: number | null }; Returns: string }
       booking_holds_credits: {
         Args: { p_status: Database["public"]["Enums"]["booking_status"] }
         Returns: boolean

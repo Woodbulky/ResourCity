@@ -90,6 +90,13 @@ await page(photo, "/owner/handovers", ["Open scanner"]);
 
 const mehta = await cookieFor("prof.mehta@dvit.edu.in");
 await page(mehta, "/manager/queue");
+
+// Phase 4 pages: demo controls, emergency decisions, policy editor, wallet emergency form, extension form.
+const admin = await cookieFor("admin@dvit.edu.in");
+await page(admin, "/admin", ["Demo controls", "Run scheduler now", "Grant"]);
+await page(admin, "/admin/policies", ["Propose a change"]);
+await page(riya, "/student/wallet", ["Request emergency credits"]);
+await page(riya, `/student/bookings/${b.id}`, ["Request an extension"]);
 await service.rpc("seed_demo");
 console.log(failures ? `\n${failures} page(s) failed` : "\nall pages rendered");
 process.exit(failures ? 1 : 0);

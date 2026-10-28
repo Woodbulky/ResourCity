@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { field } from "@/components/ui/kit";
 import type { ActionResult } from "@/lib/contracts/api";
 import {
-  acknowledgeCondition, cancelBooking, completeReturn, decideRequest, doorCheckin, submitRequest,
+  acceptOffer, acknowledgeCondition, cancelBooking, completeReturn, decideExtension, decideRequest, doorCheckin,
+  reportOwnerAbsent, requestEmergencyCredits, requestExtension, submitRequest,
 } from "@/lib/server/booking-actions";
 
 const area = `${field} h-auto min-h-20 py-2`;
@@ -150,4 +151,116 @@ export function DoorCheckinForm({ token }: { token: string }) {
 
 export function PrintButton() {
   return <Button type="button" onClick={() => window.print()} className="print:hidden">Print</Button>;
+}
+
+// Waitlist offer (PRD 8): accepting takes the slot and holds the credits.
+export function AcceptOfferForm({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(acceptOffer, null);
+  if (state?.ok) return <Result state={state} />;
+  return (
+    <form action={action} className="grid gap-2">
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <Button type="submit" disabled={pending} className="w-fit">Accept this slot</Button>
+      <Result state={state} />
+    </form>
+  );
+}
+
+export function OwnerAbsentForm({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(reportOwnerAbsent, null);
+  if (state?.ok) return <Result state={state} />;
+  return (
+    <details>
+      <summary className="cursor-pointer text-sm font-semibold text-moss hover:underline">Nobody is at the pickup point</summary>
+      <form action={action} className="mt-2 grid gap-2">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <p className="text-xs text-ink-soft">The booking is cancelled with no strike for you, your credits come back, and the organisation&apos;s Manager is told.</p>
+        <Button type="submit" variant="outline" size="sm" disabled={pending} className="w-fit">Report Owner not present</Button>
+        <Result state={state} />
+      </form>
+    </details>
+  );
+}
+
+// Extension (PRD 10): the original end stays in force until approved.
+export function ExtensionForm({ bookingId, endDate, endTime }: { bookingId: string; endDate: string; endTime: string }) {
+  const [state, action, pending] = useActionState(requestExtension, null);
+  const id = useId();
+  if (state?.ok) return <Result state={state} />;
+  return (
+    <details>
+      <summary className="cursor-pointer text-sm font-semibold text-moss hover:underline">Need more time? Request an extension</summary>
+      <form action={action} className="mt-2 grid gap-2">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1">
+            <label htmlFor={`${id}-d`} className="text-xs font-semibold">New end date</label>
+            <input id={`${id}-d`} type="date" name="endDate" required defaultValue={endDate} className={field} />
+          </div>
+          <div className="grid gap-1">
+            <label htmlFor={`${id}-t`} className="text-xs font-semibold">Time</label>
+            <input id={`${id}-t`} type="time" name="endTime" required defaultValue={endTime} className={field} />
+          </div>
+        </div>
+        <label htmlFor={`${id}-r`} className="text-xs font-semibold">Reason</label>
+        <input id={`${id}-r`} name="reason" required minLength={3} maxLength={300} className={field} />
+        <label htmlFor={`${id}-n`} className="text-xs font-semibold">Note <span className="font-normal text-ink-soft">(optional)</span></label>
+        <input id={`${id}-n`} name="note" maxLength={300} className={field} />
+        <Button type="submit" size="sm" disabled={pending} className="w-fit">Request extension</Button>
+        <Result state={state} />
+      </form>
+    </details>
+  );
+}
+
+export function ExtensionDecisionForm({ bookingId, extensionId, as }: { bookingId: string; extensionId: string; as: "owner" | "manager" }) {
+  const [state, action, pending] = useActionState(decideExtension, null);
+  const id = useId();
+  if (state?.ok) return <Result state={state} />;
+  return (
+    <form action={action} className="grid gap-2">
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <input type="hidden" name="extensionId" value={extensionId} />
+      <input type="hidden" name="as" value={as} />
+      <label htmlFor={`${id}-r`} className="text-xs font-semibold">Reason <span className="font-normal text-ink-soft">(required to decline)</span></label>
+      <input id={`${id}-r`} name="reason" maxLength={300} className={field} />
+      <div className="flex gap-2">
+        <Button type="submit" name="decision" value="approve" size="sm" disabled={pending}>Approve extension</Button>
+        <Button type="submit" name="decision" value="reject" variant="destructive" size="sm" disabled={pending}>Decline</Button>
+      </div>
+      <Result state={state} />
+    </form>
+  );
+}
+
+// Emergency credits (PRD 9): amount pre-filled with the shortfall when it is known.
+export function EmergencyCreditsForm({ cap, amount, bookingId }: { cap: number; amount?: number; bookingId?: string }) {
+  const [state, action, pending] = useActionState(requestEmergencyCredits, null);
+  const id = useId();
+  if (state?.ok) return <Result state={state} />;
+  return (
+    <form action={action} className="grid gap-3">
+      {bookingId && <input type="hidden" name="bookingId" value={bookingId} />}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-1.5">
+          <label htmlFor={`${id}-a`} className="text-sm font-semibold">Credits needed</label>
+          <input id={`${id}-a`} type="number" name="amount" min={1} max={cap} required defaultValue={amount ? Math.min(amount, cap) : undefined} className={field} />
+          <p className="text-xs text-ink-soft">Up to {cap}, once per academic year.</p>
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor={`${id}-u`} className="text-sm font-semibold">Urgency</label>
+          <select id={`${id}-u`} name="urgency" defaultValue="normal" className={field}>
+            <option value="normal">Normal</option>
+            <option value="high">High: deadline within days</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid gap-1.5">
+        <label htmlFor={`${id}-r`} className="text-sm font-semibold">Why do you need them?</label>
+        <textarea id={`${id}-r`} name="reason" required minLength={10} maxLength={500} className={area} placeholder="e.g. Capstone demo on Friday; the GPU run needs 30 more credits than I have." />
+      </div>
+      <Button type="submit" disabled={pending} className="w-fit">Send to the Admin</Button>
+      <Result state={state} />
+    </form>
+  );
 }

@@ -68,7 +68,7 @@ await check("Manager approval holds credits and writes audit + notification", as
   assert.equal(await balance(ROHAN), before - exception.credit_hold);
   const audit = await service.from("audit_events").select("action").eq("entity_id", exception.id).eq("action", "BOOKING_APPROVE");
   assert.equal(audit.data.length, 1);
-  const notes = await service.from("notifications").select("title").eq("user_id", ROHAN).eq("title", "Booking approved");
+  const notes = await service.from("notifications").select("title").eq("user_id", ROHAN).like("title", "Booking approved%");
   assert.equal(notes.data.length, 1);
 });
 

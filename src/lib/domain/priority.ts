@@ -59,3 +59,23 @@ export function rankRequests<T extends RankableRequest>(requests: readonly T[]):
       b.score - a.score || a.completedHours - b.completedHours || a.createdAt.getTime() - b.createdAt.getTime(),
   );
 }
+
+export interface Slot {
+  start: Date;
+  end: Date;
+}
+
+const overlaps = (a: Slot, b: Slot) => a.start < b.end && b.start < a.end;
+
+// Batch fill (PRD 8 step 5): in rank order, a request fits while fewer than `units` claims
+// (existing bookings plus requests already accepted) overlap it.
+// ponytail: counts overlaps, not an interval colouring; exact when requests share one slot (the batch case).
+export function fillCapacity<T extends Slot>(ranked: readonly T[], taken: readonly Slot[], units: number) {
+  const accepted: T[] = [];
+  const rest: T[] = [];
+  for (const r of ranked) {
+    const claims = [...taken, ...accepted].filter((c) => overlaps(c, r)).length;
+    (claims < units ? accepted : rest).push(r);
+  }
+  return { accepted, rest };
+}

@@ -66,10 +66,17 @@ export const studentSnapshot = cache(async (viewer: SessionViewer) => {
     now,
     policy.values.strikes,
   );
+  // At the limit, the date the oldest strike in the window drops out (review lifts then).
+  const windowStart = addDays(now, -policy.values.strikes.window_days);
+  const oldestStrike = all
+    .filter((b) => b.status === "no_show" && new Date(b.start_at) > windowStart && new Date(b.start_at) <= now)
+    .map((b) => new Date(b.start_at))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
   return {
     now,
     policy,
     profile,
+    strikesClearOn: strikes >= policy.values.strikes.limit && oldestStrike ? addDays(oldestStrike, policy.values.strikes.window_days) : null,
     ledger: entries,
     available: availableBalance(entries),
     held: activeHolds(entries),
@@ -163,7 +170,7 @@ export const catalog = cache(async (viewer: SessionViewer, opts: { resourceId?: 
         cost: r.base_rate, // one rate unit: the smallest booking
         noShowStrikes: snap.strikes,
         strikeLimit: snap.policy.values.strikes.limit,
-        strikesClearOn: null,
+        strikesClearOn: snap.strikesClearOn,
         slotFree: true,
       },
     ).filter((c) => c.key !== "slot_available" && c.key !== "max_duration");

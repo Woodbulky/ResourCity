@@ -1,7 +1,7 @@
 import { Check, Scale, ShieldCheck, SlidersHorizontal, Sparkles } from "lucide-react";
+import { PolicyEditor } from "@/components/admin-forms";
 import { formatWhen } from "@/components/format";
-import { Button } from "@/components/ui/button";
-import { ComingNext, PageHeading, Panel, PanelHeading } from "@/components/ui/kit";
+import { PageHeading, Panel, PanelHeading } from "@/components/ui/kit";
 import { policyValuesSchema, type PolicyValues } from "@/lib/contracts/policy";
 import { createClient } from "@/lib/server/supabase";
 import { requireViewer } from "@/lib/server/viewer";
@@ -19,7 +19,7 @@ const LINES = (v: PolicyValues): [string, string][] => [
   ["Late penalty", `${v.late_penalty_multiplier}× the rate per late unit, Manager-confirmed`],
 ];
 
-// Versioned global policy (PRD 9, 12). Editing with a before/after diff lands with Phase 4.
+// Versioned global policy (PRD 9, 12): edit, review the before/after diff, confirm with a reason.
 export default async function Policies() {
   await requireViewer();
   const { data: versions } = await (await createClient())
@@ -39,11 +39,17 @@ export default async function Policies() {
           </>
         }
         description="Changes apply to new requests. Every edit needs a reason, shows a before-and-after diff, and creates a new version; earlier bookings keep theirs."
-        actions={<Button disabled><SlidersHorizontal aria-hidden /> Propose a change</Button>}
       />
-      <div className="mb-5 max-w-xl">
-        <ComingNext phase={4}>Policy editing with validation, a before/after diff and a confirmed reason.</ComingNext>
-      </div>
+      {values && (
+        <Panel aria-labelledby="edit-heading" className="mb-6">
+          <details>
+            <summary className="flex cursor-pointer items-center gap-2 px-5 py-4 font-semibold text-moss">
+              <SlidersHorizontal aria-hidden className="size-4" /> <span id="edit-heading">Propose a change</span>
+            </summary>
+            <PolicyEditor current={values} version={current?.version ?? 1} />
+          </details>
+        </Panel>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <Panel aria-labelledby="current-heading">

@@ -7,11 +7,15 @@ import { Avatar } from "@/components/avatar";
 import { BookingCard, studentNote, type BookingRow } from "@/components/booking-list";
 import { formatWhen, sentence } from "@/components/format";
 import { Timeline } from "@/components/timeline";
-import { AckForm, CancelForm, CompleteReturnForm, DecisionForm } from "@/components/booking-forms";
+import {
+  AcceptOfferForm, AckForm, CancelForm, CompleteReturnForm, DecisionForm, ExtensionDecisionForm, ExtensionForm, OwnerAbsentForm,
+} from "@/components/booking-forms";
 import { StatusChip } from "@/components/status-chip";
 import { buttonVariants } from "@/components/ui/button";
 import { ComingNext, Panel, PanelHeading } from "@/components/ui/kit";
 import { ACTIVE_STATUSES } from "@/lib/contracts/booking";
+import { formatInTimeZone } from "date-fns-tz";
+import { APP_TIMEZONE } from "@/lib/domain/time";
 import type { ScoreBreakdown } from "@/lib/domain/priority";
 import { appNow } from "@/lib/server/clock";
 import { bookingQrUrl } from "@/lib/server/requests";
@@ -38,7 +42,7 @@ const STAFF_NEXT: Partial<Record<string, string>> = {
 
 export async function BookingDetail({ id, as }: { id: string; as: "student" | "owner" | "manager" }) {
   const supabase = await createClient();
-  const [{ data: b }, { data: events }, { data: reports }, { data: cases }, { data: ledger }] = await Promise.all([
+  const [{ data: b }, { data: events }, { data: reports }, { data: cases }, { data: ledger }, { data: extensions }] = await Promise.all([
     supabase.from("bookings").select(FIELDS).eq("id", id).maybeSingle(),
     supabase
       .from("audit_events")
@@ -51,6 +55,7 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
     as === "student"
       ? supabase.from("credit_ledger").select("id, delta, kind, created_at").eq("booking_id", id).order("created_at")
       : Promise.resolve({ data: null }),
+    supabase.from("extension_requests").select("id, new_end_at, reason, note, status, decision_reason, created_at").eq("booking_id", id).order("created_at"),
   ]);
   if (!b) notFound();
   const now = await appNow();
@@ -88,6 +93,11 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
     (["pending_allocation", "pending_approval", "waitlisted", "offered"].includes(b.status) ||
       (b.status === "approved" && new Date(b.start_at) > now));
 
+  const pendingExtension = extensions?.find((x) => x.status === "pending");
+  const inPickupWindow =
+    b.status === "approved" && now >= new Date(b.start_at) && now <= new Date(new Date(b.start_at).getTime() + (b.grace_minutes ?? 15) * 60_000);
+  const canExtend = as === "student" && (b.status === "approved" || b.status === "checked_out") && !pendingExtension;
+  const studentNext = as === "student" && (studentCanCancel || toAck.length > 0 || b.status === "offered" || inPickupWindow || canExtend);
   const back = as === "student" ? { href: "/student/bookings", label: "My bookings" } : as === "owner" ? { href: "/owner/requests", label: "Requests" } : { href: "/manager/queue", label: "Decision queue" };
   const breakdown = b.score_breakdown as unknown as ScoreBreakdown | null;
   const person = b.profiles;
@@ -209,7 +219,7 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
             </Panel>
           )}
 
-          {(studentCanCancel || (as === "student" && toAck.length > 0)) && (
+          {studentNext && (
             <Panel aria-labelledby="next-heading">
               <PanelHeading id="next-heading" title="Your next step" />
               <div className="grid gap-4 p-5 text-sm">
@@ -220,6 +230,20 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                       <AckForm bookingId={b.id} phase={r.phase} />
                     </div>
                   ))}
+                {b.status === "offered" && b.offer_expires_at && (
+                  <div className="grid gap-2" aria-live="polite">
+                    <p>A place opened up for you. Accept by <strong>{formatWhen(b.offer_expires_at)}</strong>, or it goes to the next student.</p>
+                    <AcceptOfferForm bookingId={b.id} />
+                  </div>
+                )}
+                {inPickupWindow && <OwnerAbsentForm bookingId={b.id} />}
+                {canExtend && (
+                  <ExtensionForm
+                    bookingId={b.id}
+                    endDate={formatInTimeZone(new Date(b.end_at), APP_TIMEZONE, "yyyy-MM-dd")}
+                    endTime={formatInTimeZone(new Date(b.end_at), APP_TIMEZONE, "HH:mm")}
+                  />
+                )}
                 {studentCanCancel && (
                   <CancelForm
                     bookingId={b.id}
@@ -272,6 +296,29 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                   <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
                     <span>{c.profiles?.full_name ?? "Student"} · {formatWhen(c.start_at)}</span>
                     <StatusChip status={c.status} />
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
+          {!!extensions?.length && (
+            <Panel aria-labelledby="ext-heading">
+              <PanelHeading id="ext-heading" title="Extensions" description="The original end stays in force until an extension is approved." />
+              <ul className="divide-y divide-line">
+                {extensions.map((x) => (
+                  <li key={x.id} className="grid gap-2 px-5 py-3 text-sm">
+                    <p>
+                      Until <strong className="font-semibold">{formatWhen(x.new_end_at)}</strong> · {sentence(x.status)}
+                    </p>
+                    <p className="text-ink-soft">{x.reason}{x.note ? ` — ${x.note}` : ""}</p>
+                    {x.decision_reason && <p><span className="text-ink-soft">Decision:</span> {x.decision_reason}</p>}
+                    {staff && x.status === "pending" &&
+                      (b.approver_role === "manager" && as === "owner" ? (
+                        <p className="rounded-lg bg-pending-bg px-3 py-2 text-pending-fg">Waiting for Manager: this resource needs the Manager to decide.</p>
+                      ) : (
+                        <ExtensionDecisionForm bookingId={b.id} extensionId={x.id} as={as} />
+                      ))}
                   </li>
                 ))}
               </ul>

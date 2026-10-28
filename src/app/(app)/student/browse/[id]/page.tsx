@@ -170,7 +170,14 @@ export default async function ResourcePage({ params, searchParams }: PageProps<"
                         {c.key === "credits" && ev ? "Credits" : CHECK_LABELS[c.key]} <span className="sr-only">: {res.word}</span>
                       </p>
                       {c.reason && <p className="text-sm text-ink-soft">{c.reason}</p>}
-                      {c.result !== "pass" && c.fix && <p className="mt-0.5 text-sm font-medium text-ink">What to do: {c.fix.startsWith("/") ? "finish verification" : c.fix}</p>}
+                      {c.result !== "pass" && c.fix && (
+                        <p className="mt-0.5 text-sm font-medium text-ink">
+                          What to do:{" "}
+                          {c.key === "credits" ? (
+                            <Link href="/student/wallet#emergency" className="text-moss underline">{c.fix}</Link>
+                          ) : c.fix.startsWith("/") ? "finish verification" : c.fix}
+                        </p>
+                      )}
                     </div>
                   </li>
                 );
