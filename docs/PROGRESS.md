@@ -1,5 +1,32 @@
 # ResourCity — progress
 
+## Phase 3 — Core happy path (code complete, 2026-10-29; click-through on Vercel pending)
+
+### Acceptance
+- Migration 7 `booking_flow` applied: `submit_booking()` (validate → insert → hold if approved → audit → notify, one transaction), `free_unit()`, `transition_booking()` now assigns a free unit on approve/offer (pending requests hold no unit), `record_condition()` (Owner-signed checklist + ≥ 3 photos under `condition-photos/{booking}/`, supervisor when required, then handover/return in the same transaction), `acknowledge_condition()`, `door_checkin()`. All service role only.
+- `npm test` → 41 passed (adds bookable hours, submission routing, signed QR). `next build` passes.
+- Live journey: `node --env-file=.env.local scripts/phase3-check.mjs` → 13 passed: students cannot call `submit_booking`; unverified refused; submit → pending with no unit or hold; duplicate refused; reject needs a reason; another org's Owner refused; approve assigns a unit and holds 10; handover needs 3 photos in the booking's folder; signed handover → checked_out; only the student acknowledges, once; return → Return OK charges 10, ledger `hold −10, release +10, charge −10`; timeline has all six events; instant meeting room + door check-in (wrong student and bad code refused); a full slot refuses a second auto-approve and waitlists at #1. `phase1-check` 16/16 and `phase2-check` 12/12 still pass.
+- Pages: `scripts/phase3-pages.mjs` (against `next start`) renders all 18 Phase 3 pages as Riya, the Photography Club Owner and Prof. Mehta: slot summary, out-of-hours error, pickup QR, cancel/withdraw, door check-in, approval form with requester history, scan with a valid and a tampered code, handover with and without a scan, listing new/edit, handover desk.
+- **Not yet verified:** clicking through the server actions in a browser (the Chrome extension was not connected this session) and the journey on the Vercel deployment. **`QR_SIGNING_SECRET` must be set in Vercel** or QR pages fail.
+
+### Built
+- **Request** (`/student/browse/[id]`): slot picker (GET form, campus time), full eligibility for that slot including availability and bookable hours, request summary (cost, hold, balance after hold, where it lands, cutoff, grace, no-show rule), purpose, exception reason when a rule is set to review. Submit lands as approved / pending approval (Owner or Manager) / waitlisted / pending allocation via `planSubmission()`.
+- **Decisions** (booking detail, Owner and Manager): approve, waitlist (reason), reject (reason); Owners see "Waiting for Manager" on restricted requests. Requester status, badges, history counts and competing requests.
+- **Pickup**: signed HMAC QR (`src/lib/domain/qr.ts`) encoding the Owner scan URL, valid 15 min before start → end of grace; `/owner/scan` (camera via `html5-qrcode`, paste fallback) → identity confirm (photo, name, slot) → handover screen with checklist OK/issue + note, guided shots padded to 3, supervisor, notes; photos upload from the browser. Student acknowledges on their booking page.
+- **Return**: return QR / "Record return" → same checklist and shots → Return OK charges min(actual, booked), releases the rest.
+- **Spaces**: printable door QR (`/owner/resources/[id]/door`), `/checkin/[token]` and an in-app `/student/scan`.
+- **Student**: "I can't make it" (approved, before start, no strike) and withdraw for pending/waitlisted/offered.
+- **Listing form** (`/owner/resources/new`, `/edit`): four templates by category (Other picks the closest), template fields, bookable hours, approval/allocation/cutoff, pricing with peak window or free, rules with block/review, badges, departments, years, org-only, PPE, safety notes, checklist and shots. Audited `RESOURCE_CREATED/UPDATED`.
+
+### Decisions and deviations
+1. Pickup moves the booking to `checked_out` when the Owner signs; the student acknowledges afterwards (both stamps kept on the record). Waiting for the student would leave the Owner stuck at the desk and needs a new actor on `handover`.
+2. Bookable hours: the start and the end must each fall inside an opening window (pickup and return happen while open), so a 2-day camera loan over a night is allowed.
+3. `submit_booking` logs actor `student` (the PRD table says System) so the timeline shows who asked.
+4. One unit per request; quantity > 1 per request, "Ask for more info", attachments and the date/time filter on browse cards are not built yet.
+5. The scanner lives under `/owner`; a Manager who is not also an Owner records returns from the booking page but cannot scan a pickup.
+6. Editing a listing cannot change quantity or status; pause/maintenance with booking cancellation is Phase 6. Resource create + its audit event are two calls, not one transaction (marked `ponytail:`).
+7. No notifications to Owners/Managers for new requests yet (Section 13 matrix is Phase 4).
+
 ## UI redesign (2026-10-29, between Phase 2 and Phase 3; architect request)
 
 The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was rebuilt in that format in Next.js against our real backend and flows; the mockup's sample data and flows were not copied.
@@ -94,4 +121,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 2 sign-off once Google sign-in is tested end to end (enable the Google provider in Supabase first). Then Phase 3 — core happy path (PRD 18): listing form, search + eligibility cards, request + approval, QR handover, return, timeline.
+Phase 3 sign-off: set `QR_SIGNING_SECRET` in Vercel, then run list → discover → request → approve → QR pickup → return → timeline on the production URL with the demo logins. Then Phase 4 — time, fairness, credits (PRD 18).
