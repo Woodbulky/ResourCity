@@ -66,9 +66,9 @@ describe("signed QR", () => {
   const token = signQr({ b: "b1", u: "u1", ...qrWindow(booking, start)! }, secret);
   const mins = (m: number) => new Date(start.getTime() + m * 60_000);
 
-  it("is valid from 15 minutes before the start until the end of grace", () => {
-    expect(verifyQr(token, secret, mins(-16)).ok).toBe(false);
-    expect(verifyQr(token, secret, mins(-15))).toMatchObject({ ok: true, payload: { b: "b1", u: "u1", p: "pickup" } });
+  it("is valid from 60 minutes before the start until the end of grace", () => {
+    expect(verifyQr(token, secret, mins(-61)).ok).toBe(false);
+    expect(verifyQr(token, secret, mins(-60))).toMatchObject({ ok: true, payload: { b: "b1", u: "u1", p: "pickup" } });
     expect(verifyQr(token, secret, mins(30)).ok).toBe(true);
     expect(verifyQr(token, secret, mins(31))).toMatchObject({ ok: false, error: expect.stringMatching(/expired/) });
   });

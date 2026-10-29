@@ -32,12 +32,12 @@ export function verifyQr(token: string, secret: string, now: Date): QrCheck {
     return { ok: false, error: "This is not a ResourCity booking code." };
   }
   const t = now.getTime() / 1000;
-  if (t < payload.nbf) return { ok: false, error: "This code is not valid yet: it opens 15 minutes before the slot." };
+  if (t < payload.nbf) return { ok: false, error: "This code is not valid yet: it opens 60 minutes before the slot." };
   if (t > payload.exp) return { ok: false, error: "This code has expired. Ask the student to refresh their booking page." };
   return { ok: true, payload };
 }
 
-// Pickup: 15 minutes before start until the end of grace. Return: from start until a day after
+// Pickup: 60 minutes before start until the end of grace (PRD 10; door check-in stays 15). Return: from start until a day after
 // the later of the end time and now (an overdue item can still come back).
 export function qrWindow(
   b: { status: string; start_at: Date; end_at: Date; grace_minutes: number | null },
@@ -45,7 +45,7 @@ export function qrWindow(
 ): Pick<QrPayload, "p" | "nbf" | "exp"> | null {
   const s = (d: Date | number) => Math.floor(new Date(d).getTime() / 1000);
   if (b.status === "approved")
-    return { p: "pickup", nbf: s(b.start_at) - 15 * 60, exp: s(b.start_at) + (b.grace_minutes ?? 15) * 60 };
+    return { p: "pickup", nbf: s(b.start_at) - 60 * 60, exp: s(b.start_at) + (b.grace_minutes ?? 15) * 60 };
   if (b.status === "checked_out" || b.status === "overdue")
     return { p: "return", nbf: s(b.start_at), exp: Math.max(s(b.end_at), s(now)) + 24 * 3600 };
   return null;

@@ -1,9 +1,9 @@
 # ResourCity — progress
 
-## Phase 7 — Hardening (in progress, 2026-10-29; one decision open, see below)
+## Phase 7 — Hardening (complete, 2026-10-29)
 
 ### Acceptance
-- `node --env-file=.env.local scripts/phase7-judge.mjs` (against `next start -p 3005`): the PRD 17 judge script, steps 1-11, twice in a row, each run after a reset. Each step makes the same database call as the button behind it and renders that role's next page; the scheduler ticks after every clock move, as the Render cron would. **24 of 26 steps pass in both runs; 5a fails by design (open decision).**
+- `node --env-file=.env.local scripts/phase7-judge.mjs` (against `next start -p 3005`): the PRD 17 judge script, steps 1-11, twice in a row, each run after a reset. Each step makes the same database call as the button behind it and renders that role's next page; the scheduler ticks after every clock move, as the Render cron would. **All 13 steps (including 5a: the pickup code is valid right after +1 day) pass in both runs.**
 - `scripts/phase7-forbidden.mjs` → 11 passed: student, Owner, Manager and Admin each try an insert and a delete-all on every public table over REST (RLS or missing grant refuses, no row disappears); a student approves; an Owner edits/lists into/re-hours/decides for another org; an Owner changes status, quantity, door token or a unit; a Manager grants roles, verifies, makes themselves Admin; every role and the service role edit or delete an audit row, forge `log_event`; a student reads others' ledger, notifications, cases, penalties, emails, ID proofs; signed-out callers.
 - `scripts/phase7-a11y.mjs` → 36 pages across all roles and signed out: every form control labelled, img alt, buttons and links named, one `<main id="main">` for the skip link, no duplicate ids, `lang`. The checker was verified against planted faults. Token contrast: all 29 text/background pairs in use pass AA (lowest: ink-soft on line, 4.58).
 - Mobile: at 390 px no page overflows horizontally (Manager pages, booking detail with the QR panel, pickup and return handover screens, checked in Chrome); the scanner is `max-w-sm`, square, rear camera, 240 px box.
@@ -21,10 +21,13 @@
 2. `safeParse(...).data ?? parse({})` still fails open for malformed rule JSON. Stored rules are written only through the validated Owner form, so after the id fix this cannot trigger from app data; a hand-edited row would.
 3. The judge script drives the database calls behind each button, not the buttons. A by-hand run in a logged-out browser is still worth doing once the QR decision is made.
 
-### Open decision / for the architect
-- **Pickup QR window vs demo step 5.** The request form defaults to the next whole hour; the judge picks tomorrow, then presses +1 day. That leaves the clock 60 − (current minute) minutes before the slot, but the pickup QR opens only 15 min before (PRD 10). In about 3 of 4 runs the scan says "not valid yet" and the judge must press +15 min. Options: widen the window to 60 min, keep it and add "+15 min" to the testing instructions, or add a demo-clock button.
-- **Gmail SMTP (optional):** not built. `GMAIL_USER` / `GMAIL_APP_PASSWORD` are set, but every demo account is `@dvit.edu.in`, a domain we do not own; mail would go to real-looking addresses. If wanted: redirect all demo mail to one inbox.
+### Decided with the architect
+- **Pickup QR opens 60 min before the slot** (was 15; PRD 10 updated). The request form defaults to the next whole hour; the judge picks tomorrow and presses +1 day, which lands 0-60 min before the slot. With 15 min, about 3 runs in 4 needed an extra +15 min. Door check-in keeps 15 min.
+- **Gmail SMTP: skipped** (PRD cut list item 3). Every demo account is `@dvit.edu.in`, a domain we do not own; in-app notifications cover Section 13. Future scope.
+
+### Known issues / for the architect
 - Phase 4 time-of-day issue and the append-only audit log across resets: unchanged from Phase 6.
+- A by-hand judge run in a logged-out browser is still worth doing before submission; the script drives the database calls behind each button, not the buttons.
 
 ## Phase 6 — Dashboards and insights (complete, 2026-10-29)
 
@@ -247,4 +250,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 7: settle the pickup QR window (above), rerun `phase7-judge.mjs` to 26/26, then a by-hand judge run in a logged-out browser. Then Phase 8 — submission (PRD 18/19).
+Phase 8 — submission (PRD 18/19): README, docs/SUBMISSION.md with testing instructions and the demo password, disclosures, final production deploy, every link checked from an incognito window.

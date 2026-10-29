@@ -530,7 +530,7 @@ An approved booking produces a signed, time-limited QR; the Owner scans it to ve
 
 ### QR pickup (equipment)
 
-1. On approval, the student's booking page shows a QR: an HMAC-signed token (`QR_SIGNING_SECRET`) carrying booking ID, user ID and expiry. It is valid from 15 minutes before start until the end of the grace period, and again during the return window.
+1. On approval, the student's booking page shows a QR: an HMAC-signed token (`QR_SIGNING_SECRET`) carrying booking ID, user ID and expiry. It is valid from 60 minutes before start until the end of the grace period (so the judge script's "+1 day" lands inside it; door check-in keeps 15 minutes), and again during the return window.
 2. The Owner opens **Scan** on a phone. A valid scan shows the student's name, Google photo, resource and slot; the Owner confirms it is the same person.
 3. The scan opens the handover screen: checklist items (OK / issue + note), the guided photo shots (minimum 3), supervisor name if supervision is required.
 4. The Owner signs; the student taps **Acknowledge condition** in their app. Both are stored on the `checkout` condition report. Booking → `checked_out`, `picked_up_at = app_now()`.

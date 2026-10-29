@@ -48,7 +48,7 @@ export function studentNote(b: BookingRow): string {
     case "offered":
       return `A slot is yours if you accept${b.offer_expires_at ? ` by ${formatWhen(b.offer_expires_at)}` : ""}.`;
     case "approved":
-      return `${b.credit_hold} credits on hold. Your pickup QR opens 15 minutes before the slot.`;
+      return `${b.credit_hold} credits on hold. Your pickup QR opens 60 minutes before the slot.`;
     case "checked_out":
       return `Return by ${formatWhen(b.end_at)}${b.resources?.location ? ` · ${b.resources.location}` : ""}.`;
     case "overdue":
