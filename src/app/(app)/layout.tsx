@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ShellProvider } from "@/components/shell/shell-context";
 import { AppSidebar, SidebarSkeleton } from "@/components/shell/sidebar";
 import { AppTopbar, TopbarSkeleton } from "@/components/shell/topbar";
+import PageSkeleton from "./loading";
 
 // Signed-in shell (PRD 12): sidebar per role area, topbar with campus date and inbox.
 // Each part reads the session behind its own Suspense boundary so none blocks the others.
@@ -27,18 +28,3 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   );
 }
 
-function PageSkeleton() {
-  return (
-    <div aria-busy className="animate-pulse space-y-4">
-      <span className="sr-only">Loading…</span>
-      <div className="h-4 w-40 rounded bg-wash" />
-      <div className="h-12 w-2/3 max-w-xl rounded-lg bg-wash" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-28 rounded-[var(--radius-card)] bg-wash" />
-        ))}
-      </div>
-      <div className="h-64 rounded-[var(--radius-card)] bg-wash" />
-    </div>
-  );
-}
