@@ -14,8 +14,17 @@ import { aiJson, dataUrl, type AiContent, type AiResult } from "./client";
 // stored or shown labelled "AI suggestion" and never change a state.
 
 // ---------------------------------------------------------------------------- search parser (must)
+// The category codes with what each holds, so "camera" lands in media rather than electronics.
+const CATEGORY_HINTS: Record<(typeof Constants.public.Enums.resource_category)[number], string> = {
+  classroom: "classrooms", seminar_hall: "seminar halls, auditoriums", meeting_room: "meeting rooms, discussion rooms",
+  sports_ground: "sports grounds and courts (badminton, cricket)", lab: "laboratories, computer labs, workshops",
+  electronics: "computers and electronic equipment (laptops, oscilloscopes, GPU workstations)",
+  media: "photography and media equipment (cameras, DSLR, video, microphones)", sports_equipment: "sports kits and equipment",
+  machine: "machines (CNC, laser cutter, 3D printer)", other: "anything else",
+};
+
 const SEARCH_PROMPT = `You turn a student's search for campus resources into filters. You only parse; you never decide availability.
-Fields: category (one of ${Constants.public.Enums.resource_category.join(", ")}, or null), keywords (short nouns to match names, e.g. "camera"),
+Fields: category (one code from: ${Object.entries(CATEGORY_HINTS).map(([k, v]) => `${k} = ${v}`).join("; ")}; or null if unsure), keywords (short nouns to match names, e.g. "camera"),
 date (yyyy-MM-dd), start_time and end_time (HH:mm, 24 h, campus time), duration_minutes, quantity (units wanted), capacity (people),
 needs_clarification (true when a date, time or duration is vague, e.g. "soon", "next week", "evening" with no day), clarification_question.
 Resolve "today", "tomorrow" and weekday names against the current date given. "This evening" means 17:00-21:00 today, "morning" 09:00-12:00,

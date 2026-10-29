@@ -528,8 +528,8 @@ export async function BookingDetail({ id, as }: { id: string; as: "student" | "o
                 {penalties.map((p) => (
                   <li key={p.id} className="grid gap-2 px-5 py-4 text-sm">
                     <p>
-                      <strong className="font-semibold">{sentence(p.kind)} penalty</strong> · {sentence(p.status)} · {p.final_amount ?? p.proposed_amount} credits
-                      {p.policy_versions && <span className="text-ink-soft"> · policy v{p.policy_versions.version}</span>}
+                      <strong className="font-semibold">{`${sentence(p.kind)} penalty`}</strong> · {sentence(p.status)} · {p.final_amount ?? p.proposed_amount} credits
+                      {p.policy_versions && <span className="text-ink-soft">{` · policy v${p.policy_versions.version}`}</span>}
                     </p>
                     {p.kind === "late" && b.returned_at && (
                       <p className="text-ink-soft">
