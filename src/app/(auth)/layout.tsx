@@ -12,7 +12,7 @@ const FACTS = [
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="grid min-h-screen flex-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <aside className="on-dark relative hidden overflow-hidden bg-pine-deep px-12 py-10 text-[#e9f0e5] lg:flex lg:flex-col">
+      <aside className="on-dark relative hidden overflow-hidden bg-pine-deep px-12 py-10 text-[#e9f0e5] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start">
         <span aria-hidden className="absolute -right-24 -top-24 size-96 rounded-full border border-leaf/15 shadow-[0_0_0_34px_rgba(191,232,121,0.04),0_0_0_70px_rgba(191,232,121,0.03)]" />
         <Link href="/" className="relative w-fit rounded-md" aria-label="ResourCity home">
           <Wordmark dark />
