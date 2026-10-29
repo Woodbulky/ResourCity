@@ -169,7 +169,7 @@ describe("priority score (PRD 8)", () => {
 });
 
 describe("eligibility", () => {
-  const CNC = "00000000-0000-4000-8000-000000000001";
+  const CNC = "00000000-0000-4000-c000-000000000002"; // the seeded id: not an RFC variant, must still parse
   const student: EligibilityStudent = {
     status: "verified",
     status_reason: null,

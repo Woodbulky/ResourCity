@@ -58,7 +58,7 @@ ok(await db.rpc("seed_demo"));
 const roles = { student: "riya", owner: "photo.lead", manager: "prof.mehta", admin: "admin" };
 const clients = {};
 for (const [role, email] of Object.entries(roles)) clients[role] = await signIn(email);
-const [riya, mehta, photoClub, makerspace] = await Promise.all([
+const [riya, mehta, , makerspace] = await Promise.all([
   id("profiles", "email", "riya@dvit.edu.in"), id("profiles", "email", "prof.mehta@dvit.edu.in"),
   id("organizations", "name", "Photography Club"), id("organizations", "name", "Makerspace"),
 ]);

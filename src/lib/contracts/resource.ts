@@ -15,8 +15,10 @@ export type RuleMode = z.infer<typeof ruleMode>;
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/);
 
 // resources.eligibility
+// Ids use z.guid(), not z.uuid(): Zod 4's uuid() rejects the seed's non-RFC variant ids
+// (…-c000-…), and a failed parse here falls back to "no requirements" in every reader.
 export const eligibilitySchema = z.object({
-  required_badge_type_ids: z.array(z.string().uuid()).default([]),
+  required_badge_type_ids: z.array(z.guid()).default([]),
   departments: z.array(z.string()).default([]), // empty = open to all
   years: z.array(z.number().int().min(1).max(4)).default([]),
   org_members_only: z.boolean().default(false),
@@ -91,8 +93,8 @@ const optionalInt = (max: number) =>
 // The Owner listing form (PRD 6). Rules carry their own block / review mode.
 export const resourceInputSchema = z
   .object({
-    id: z.string().uuid().optional(),
-    orgId: z.string().uuid(),
+    id: z.guid().optional(),
+    orgId: z.guid(),
     category: z.enum(["classroom", "seminar_hall", "meeting_room", "sports_ground", "lab", "electronics", "media", "sports_equipment", "machine", "other"]),
     template: z.enum(["space", "lab", "portable", "machine"]),
     name: z.string().trim().min(3, "Give the resource a name.").max(120),
@@ -117,7 +119,7 @@ export const resourceInputSchema = z
     maxDurationMode: ruleMode,
     maxActiveMode: ruleMode,
     creditsMode: ruleMode,
-    badgeTypeIds: z.array(z.string().uuid()),
+    badgeTypeIds: z.array(z.guid()),
     departments: z.array(z.string()),
     years: z.array(z.coerce.number().int().min(1).max(4)),
     orgMembersOnly: z.boolean(),

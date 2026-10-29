@@ -7,7 +7,7 @@ export const actorRoleSchema = z.enum(["student", "owner", "manager", "admin", "
 // Fields transitionBooking() may set alongside a status change (computed in src/lib/domain).
 export const transitionPayloadSchema = z
   .object({
-    unit_id: z.string().uuid(),
+    unit_id: z.guid(),
     grace_minutes: z.number().int().nonnegative(),
     waitlist_position: z.number().int().positive(),
     offer_expires_at: z.string().datetime({ offset: true }),
@@ -21,9 +21,9 @@ export const transitionPayloadSchema = z
   .catchall(z.unknown()); // extra context (e.g. suspension id) lands in audit metadata
 
 export const transitionBookingInputSchema = z.object({
-  bookingId: z.string().uuid(),
+  bookingId: z.guid(),
   event: z.enum(BOOKING_EVENTS),
-  actor: z.object({ id: z.string().uuid().nullable(), role: actorRoleSchema }),
+  actor: z.object({ id: z.guid().nullable(), role: actorRoleSchema }),
   reason: z.string().trim().max(1000).optional(),
   payload: transitionPayloadSchema.default({}),
 });
@@ -47,19 +47,19 @@ export type OnboardingInput = z.infer<typeof onboardingInputSchema>;
 
 export const verificationDecisionSchema = z
   .object({
-    userId: z.string().uuid(),
+    userId: z.guid(),
     approve: z.boolean(),
     reason: z.string().trim().max(500).optional(),
   })
   .refine((d) => d.approve || !!d.reason, { message: "Give a reason for the rejection.", path: ["reason"] });
 
 export const membershipChangeSchema = z.object({
-  userId: z.string().uuid(),
-  orgId: z.string().uuid(),
+  userId: z.guid(),
+  orgId: z.guid(),
   role: z.enum(["owner", "manager"]),
   grant: z.boolean(),
   reason: z.string().trim().min(3, "A reason is required.").max(500),
-  replacementUserId: z.string().uuid().optional(),
+  replacementUserId: z.guid().optional(),
 });
 
 // One-click demo logins (PRD 4), demo mode only.
