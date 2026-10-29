@@ -1,5 +1,21 @@
 # ResourCity — progress
 
+## Phase 8 — Submission (in progress, 2026-10-29; team details outstanding)
+
+### Done
+- `docs/SUBMISSION.md`: links, the full project document (use case, users, why it matters, solution, workflow, features, stack and architecture, AI, privacy/security/fairness), testing instructions with the demo panel, demo password, clock controls and the judge script in real UI labels, disclosures, known limitations, future scope. `README.md` points to it.
+- **Demo panel fix:** the judge script logs in as Aarav (step 2) and Sneha (step 11), but only five accounts had buttons and there is no password form, so a judge could not do those steps. Added Aarav, Sneha, Kabir and Om (pending); corrected Riya, Sneha and Om's display names to the seed.
+- **Production verified:** `phase7-judge.mjs https://resour-city.vercel.app` → all 13 steps pass twice after a reset (this also proves `QR_SIGNING_SECRET` and `CRON_SECRET` are set on Vercel). Every link in README and SUBMISSION returns 200 with no cookies; signed-out `/student`, `/owner`, `/admin`, `/manager/queue` redirect to `/login`. Demo data re-seeded afterwards.
+- Checklist: product live; repo public; commit history 29 Oct 00:23 IST onward, inside the window; disclosures written.
+
+### Decisions
+- No Render cron (not deployed). The testing instructions tell judges to press **Run scheduler now** after every clock move; listed under known limitations. `render.yaml` stays for later.
+- Commit `7be4a36` is authored as "Claude" (cloud session). History on `main` is not rewritten; the disclosure names it.
+
+### Outstanding
+- **Team and participant details** (SUBMISSION §11 is a TODO).
+- A by-hand run of the judge script in an incognito window on the production URL (the script drives the same calls as the buttons; the camera scan and the buttons themselves need a person).
+
 ## Phase 7 — Hardening (complete, 2026-10-29)
 
 ### Acceptance
@@ -250,4 +266,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 8 — submission (PRD 18/19): README, docs/SUBMISSION.md with testing instructions and the demo password, disclosures, final production deploy, every link checked from an incognito window.
+Fill in SUBMISSION §11 (team), do one incognito run of the judge script on production, then `phase-8 complete` and freeze.
