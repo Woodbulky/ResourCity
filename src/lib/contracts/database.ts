@@ -1437,6 +1437,22 @@ export type Database = {
         Args: { p_actor: string; p_approve: boolean; p_badge: string; p_issued: string | null; p_reason: string; p_role: string }
         Returns: Database["public"]["Tables"]["user_badges"]["Row"]
       }
+      // Phase 6 (migration 10), added by hand in generated form.
+      audit_search: {
+        Args: {
+          p_actor?: string | null; p_user?: string | null; p_resource?: string | null; p_org?: string | null; p_action?: string | null
+          p_from?: string | null; p_to?: string | null; p_policy_version?: number | null; p_limit?: number
+        }
+        Returns: {
+          id: number; created_at: string; action: string; actor_name: string | null; actor_role: string; entity_type: string
+          entity_id: string; org_name: string | null; resource_name: string | null; subject_name: string | null
+          from_state: string | null; to_state: string | null; reason: string | null; policy_version: number | null
+        }[]
+      }
+      create_badge_type: {
+        Args: { p_actor: string; p_description: string; p_name: string; p_org: string; p_validity_days: number }
+        Returns: Database["public"]["Tables"]["badge_types"]["Row"]
+      }
       policy_values: { Args: { p_version?: string }; Returns: Json }
       report_owner_absent: {
         Args: { p_booking: string; p_user: string }

@@ -1,5 +1,31 @@
 # ResourCity — progress
 
+## Phase 6 — Dashboards and insights (complete, 2026-10-29)
+
+### Acceptance
+- Migration 10 `dashboards` applied: `audit_search()` (filters for actor, affected user, resource, organisation, event type, date range, policy version; booking events resolve to their resource; visibility is the audit read policy: own, org staff or Admin) and `create_badge_type()` (Admin only, validated, `BADGE_TYPE_CREATED` audited, service role only).
+- `npm test` → 50 passed. `tsc`, `eslint`, `next build` pass.
+- Live: `node --env-file=.env.local scripts/phase6-check.mjs` (against `next start`) → 22 passed: seed has 1 emergency request, 1 escalation, 1 certificate; Admin home shows the matching "N waiting" and the escalation row; Photography Club Owner sees the AI flag, Makerspace Owner "1 training certificate to verify"; the Owner edit page offers pause and maintenance; Prof. Mehta's insights show My decisions, patterns and the utilisation columns; Kabir shows "2 / 3"; Admin insights, badge types and audit filters (event type, resource) render; the CSV export has the header, only the filtered actions and no emails, and a student gets no CSV; a student's `audit_search` sees only their own events; `create_badge_type` is refused for signed-in users and non-Admin actors, refuses duplicates and is audited.
+- Regression: `phase1-check`, `phase2-check`, `phase3-check`, `phase5-check`, `phase3-pages`, `phase5-pages` pass. `phase4-check` 14/15, see known issues.
+
+### Built
+- **Student**: already complete from Phases 3 to 5 (action panel, wallet, strikes, badges with expiry, account status).
+- **Owner**: home gets "Also waiting on you": AI condition flags not yet confirmed or dismissed (returns whose comparison says possible damage), certificates to verify, damage reports under Manager review. Resource edit page gets an Availability panel: pause, mark under maintenance, reopen (with reason; upcoming bookings are cancelled and credits released). An unsafe resource shows that only a Manager can restore it.
+- **Manager**: department insights add booked vs open vs used hours and use % per resource (open hours from availability windows), overdue now, "Owner not present" (30 days), booking distribution (share held by the busiest fifth of students), repeated no-shows, and **My decisions**: approvals, rejections, disputes resolved, overrides, penalties confirmed / reduced / waived, average hours from request to decision ("for self-review, never a score").
+- **Admin**: Action required now lists escalations (alert only; Admins never decide them) and high-severity incidents besides verifications and emergency credits. New `/admin/badges` (types with validity, issuer, holders and certificates waiting; add a type; issue and revoke history). New `/admin/insights` (underused resources least used first, labelled "before/after comparison, not proof of cause"; utilisation by organisation; booking distribution; no-shows by weekday; override frequency per Manager; emergency grants). Audit log: server-side filters and **Export CSV** (`/admin/audit/export`, same filters, up to 5000 rows, names and roles only, cells quoted and formula-safe).
+
+### Decisions and deviations
+1. `audit_search` is security definer with the audit read policy written into its WHERE clause: as security invoker the per-row RLS checks across the joins hit the statement timeout for an Admin (about 3,900 events).
+2. Utilisation ignores blackout dates (open hours = weekly windows × 30/7 × quantity), marked `ponytail:` in `queues.ts`.
+3. No badge revoke action exists yet (none was specified in earlier phases); the history lists verifications, rejections and new types, and would show revocations once they exist.
+4. "My decisions" average time covers the latest 100 approve/reject decisions.
+
+### Known issues / for the architect
+- **Audit events survive demo resets** (append-only by design), so "Owner not present", override counts and the audit log include events from earlier test runs. Expected on a fresh database; worth knowing before the judges look.
+- `phase4-check` "overdue +6 h reaches the Manager" depends on the time of day: the script jumps the clock to the seeded court slot (a fixed time of day), so in the late afternoon the overdue laptop passes 24 h and reaches level 3 instead of 2. Scheduler behaviour is correct; the test assumption is not. Not touched in this phase.
+- Running all the check scripts back to back can hit Supabase Auth sign-in limits (`AuthRetryableFetchError`); each passes when run alone.
+- Pages verified by script (render and text), not yet by eye in a browser.
+
 ## Phase 5 — Trust workflows and AI (complete, 2026-10-30)
 
 ### Acceptance
@@ -195,4 +221,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 6 — dashboards and insights (PRD 18): student action panel, Owner Today strip and queues (AI flags, certificates), Manager department overview and decision stats, Admin action queue, badge types, underused-resources report, override counts, audit filters and CSV export, Owner pause/maintenance screen.
+Phase 7 — hardening (PRD 18): reset demo data button and a fresh-eyes judge-script run from a logged-out browser, forbidden-action test pass (PRD 15), accessibility and mobile pass, loading and error states, optional Gmail SMTP.

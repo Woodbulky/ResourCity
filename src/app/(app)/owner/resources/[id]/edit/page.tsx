@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ResourceForm, type ResourceDefaults } from "@/components/resource-form";
-import { PageHeading } from "@/components/ui/kit";
+import { ResourceStatusForm } from "@/components/trust-forms";
+import { Flag, PageHeading, Panel, PanelHeading } from "@/components/ui/kit";
 import {
   bookingRulesSchema, checklistSchema, eligibilitySchema, safetyRulesSchema, TEMPLATE_FEATURES,
 } from "@/lib/contracts/resource";
@@ -70,6 +71,25 @@ export default async function EditResourcePage({ params }: PageProps<"/owner/res
   return (
     <>
       <PageHeading eyebrow="Listings · edit" title={r.name} description="Changes apply to new requests only; existing bookings keep the rules they were approved under." />
+      <Panel aria-labelledby="status-heading" className="mb-6">
+        <PanelHeading
+          id="status-heading"
+          title="Availability"
+          description="Pause a listing or take it in for maintenance. Upcoming bookings are cancelled with your reason and credits released."
+          aside={<Flag tone={r.status === "active" ? "good" : r.status === "unsafe" ? "danger" : "warn"}>{r.status.replaceAll("_", " ")}</Flag>}
+        />
+        <div className="flex flex-wrap gap-x-8 gap-y-3 p-5">
+          {r.status === "unsafe" ? (
+            <p className="text-sm text-ink-soft">Marked unsafe after an incident. Only a Manager can confirm it is safe to use again.</p>
+          ) : (
+            <>
+              {r.status !== "active" && <ResourceStatusForm resourceId={r.id} as="owner" to="active" label="Reopen for bookings" />}
+              {r.status !== "paused" && <ResourceStatusForm resourceId={r.id} as="owner" to="paused" label="Pause bookings" />}
+              {r.status !== "under_maintenance" && <ResourceStatusForm resourceId={r.id} as="owner" to="under_maintenance" label="Mark under maintenance" />}
+            </>
+          )}
+        </div>
+      </Panel>
       <ResourceForm orgs={orgs} badgeTypes={badgeTypes ?? []} defaults={defaults} />
     </>
   );

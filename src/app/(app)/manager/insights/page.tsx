@@ -1,14 +1,14 @@
 import { BadgeCheck, Building2, Clock, UserX } from "lucide-react";
-import { CATEGORIES } from "@/components/category";
 import { formatDay } from "@/components/format";
-import { EmptyState, Flag, PageHeading, Panel, PanelHeading, SummaryCard, SummaryRow } from "@/components/ui/kit";
-import { orgInsights } from "@/lib/server/queues";
+import { ResourceUseTable } from "@/components/staff";
+import { EmptyState, PageHeading, Panel, PanelHeading, SummaryCard, SummaryRow } from "@/components/ui/kit";
+import { myDecisions, orgInsights } from "@/lib/server/queues";
 import { requireViewer } from "@/lib/server/viewer";
 
 // Department overview (PRD 12): recorded utilisation from check-in/out times.
 export default async function Insights() {
   const viewer = await requireViewer();
-  const ins = await orgInsights(viewer);
+  const [ins, mine] = await Promise.all([orgInsights(viewer), myDecisions(viewer)]);
   const peak = Math.max(1, ...ins.weeks.map((w) => w.hours));
   const top = Math.max(1, ...ins.perResource.map((r) => r.hours));
   const notBookable = ins.perResource.filter((r) => r.status !== "active");
@@ -73,36 +73,70 @@ export default async function Insights() {
         </Panel>
       </div>
 
-      <Panel aria-labelledby="table-heading" className="mt-6">
-        <PanelHeading id="table-heading" title="Every resource" description={notBookable.length ? `${notBookable.length} paused, under maintenance or unsafe` : "All resources bookable"} />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
-                <th scope="col" className="px-5 py-3 font-semibold">Resource</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Status</th>
-                <th scope="col" className="px-3 py-3 text-right font-semibold">Hours, 30 d</th>
-                <th scope="col" className="px-3 py-3 text-right font-semibold">Completed</th>
-                <th scope="col" className="px-5 py-3 text-right font-semibold">No-shows</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {ins.perResource.map((r) => (
-                <tr key={r.id}>
-                  <th scope="row" className="px-5 py-3 text-left font-semibold">
-                    {r.name} <span className="font-normal text-ink-soft">· {CATEGORIES[r.category].label}</span>
-                  </th>
-                  <td className="px-3 py-3">
-                    <Flag tone={r.status === "active" ? "good" : r.status === "unsafe" ? "danger" : "warn"}>{r.status.replaceAll("_", " ")}</Flag>
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono">{r.hours}</td>
-                  <td className="px-3 py-3 text-right font-mono">{r.bookings}</td>
-                  <td className="px-5 py-3 text-right font-mono">{r.noShows}</td>
-                </tr>
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <Panel aria-labelledby="patterns-heading">
+          <PanelHeading id="patterns-heading" title="People and patterns" description="Last 30 days. Signals to look into, not verdicts." />
+          <dl className="grid grid-cols-2 gap-px bg-line text-sm">
+            {[
+              ["Overdue right now", ins.overdue],
+              ["Owner not present", ins.ownerNotPresent],
+              ["Students with a booking", ins.distribution.students],
+              [
+                `Share held by the top ${ins.distribution.topCount}`,
+                ins.distribution.topShare === null ? "—" : `${ins.distribution.topShare}%`,
+              ],
+            ].map(([k, v]) => (
+              <div key={k} className="bg-paper px-5 py-3">
+                <dt className="text-ink-soft">{k}</dt>
+                <dd className="display text-2xl">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <h3 className="border-t border-line px-5 pt-4 text-sm font-semibold">Repeated no-shows</h3>
+          {ins.repeatNoShows.length ? (
+            <ul className="divide-y divide-line">
+              {ins.repeatNoShows.map((p, i) => (
+                <li key={i} className="flex justify-between px-5 py-2.5 text-sm">
+                  <span>{p.name}</span>
+                  <span className="font-mono">{p.noShows} no-shows</span>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          ) : (
+            <p className="px-5 pb-4 pt-1 text-sm text-ink-soft">Nobody has missed more than one pickup.</p>
+          )}
+        </Panel>
+
+        <Panel aria-labelledby="mine-heading">
+          <PanelHeading id="mine-heading" title="My decisions" description="Your own record, for self-review. Never a score." />
+          <dl className="grid grid-cols-2 gap-px bg-line text-sm">
+            {[
+              ["Approvals", mine.approvals],
+              ["Rejections", mine.rejections],
+              ["Disputes resolved", mine.disputes],
+              ["Overrides", mine.overrides],
+              ["Penalties confirmed", mine.penaltiesConfirmed],
+              ["Reduced · waived", `${mine.penaltiesReduced} · ${mine.penaltiesWaived}`],
+            ].map(([k, v]) => (
+              <div key={k} className="bg-paper px-5 py-3">
+                <dt className="text-ink-soft">{k}</dt>
+                <dd className="display text-2xl">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">
+            Average time from request to your decision: <strong className="text-ink">{mine.avgHoursToDecide === null ? "—" : `${mine.avgHoursToDecide} h`}</strong>
+          </p>
+        </Panel>
+      </div>
+
+      <Panel aria-labelledby="table-heading" className="mt-6">
+        <PanelHeading
+          id="table-heading"
+          title="Every resource"
+          description={`Open hours from availability windows; use = recorded hours ÷ open hours. ${notBookable.length ? `${notBookable.length} paused, under maintenance or unsafe.` : "All bookable."}`}
+        />
+        <ResourceUseTable rows={ins.perResource} />
       </Panel>
     </>
   );

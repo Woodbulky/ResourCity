@@ -23,8 +23,6 @@ const FILTERS = {
 } as const;
 type Filter = keyof typeof FILTERS;
 
-const words = (s: string) => s.toLowerCase().replaceAll("_", " ");
-
 // Filterable view of the append-only log (PRD 15). Contact details never appear here.
 export function AuditTable({ rows }: { rows: AuditRow[] }) {
   const [query, setQuery] = useState("");
@@ -77,7 +75,7 @@ export function AuditTable({ rows }: { rows: AuditRow[] }) {
                 <tr key={r.id} className="align-top">
                   <th scope="row" className="px-5 py-3 text-left">
                     <span className="block font-mono text-xs font-semibold">{r.action}</span>
-                    <span className="text-xs font-normal text-ink-soft">{words(r.entity)}</span>
+                    <span className="text-xs font-normal text-ink-soft">{r.entity}</span>
                   </th>
                   <td className="px-3 py-3">
                     <span className="block font-medium">{r.actor}</span>

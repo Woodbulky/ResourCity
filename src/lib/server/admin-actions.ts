@@ -115,3 +115,15 @@ export async function decideEmergencyCredits(_prev: ActionResult | null, form: F
   if (error) return { ok: false, error: friendlyError(error.message) };
   return done(data.status === "rejected" ? "Request declined." : `${grant} credits granted.`);
 }
+
+// ---------------------------------------------------------------------------- badge types (PRD 12)
+export async function createBadgeType(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return NOT_ADMIN;
+  const { error } = await createServiceClient().rpc("create_badge_type", {
+    p_actor: a.id, p_name: str(form, "name").slice(0, 120), p_description: str(form, "description").slice(0, 500),
+    p_org: str(form, "orgId"), p_validity_days: Number(str(form, "validityDays")),
+  });
+  if (error) return { ok: false, error: friendlyError(error.message) };
+  return done("Badge type added. Owners can now require it and verify certificates for it.");
+}

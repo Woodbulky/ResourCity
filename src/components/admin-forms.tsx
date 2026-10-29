@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { field } from "@/components/ui/kit";
 import type { PolicyValues } from "@/lib/contracts/policy";
 import { policyDiff } from "@/lib/domain/policy";
-import { changePolicy, decideEmergencyCredits, moveClock, resetDemoData, runSchedulerNow } from "@/lib/server/admin-actions";
+import { changePolicy, createBadgeType, decideEmergencyCredits, moveClock, resetDemoData, runSchedulerNow } from "@/lib/server/admin-actions";
 
 // Demo controls (PRD 12, 17): clock +15 min / +1 h / +1 day / reset, run scheduler, reset demo data.
 export function DemoControls() {
@@ -63,6 +63,36 @@ export function EmergencyDecisionForm({ requestId, amount, cap }: { requestId: s
         <Button type="submit" name="decision" value="grant" size="sm" disabled={pending}>Grant</Button>
         <Button type="submit" name="decision" value="reject" variant="destructive" size="sm" disabled={pending}>Decline</Button>
       </div>
+      <Result state={state} />
+    </form>
+  );
+}
+
+// New badge type (PRD 12): the issuing organisation verifies certificates for it.
+export function BadgeTypeForm({ orgs }: { orgs: { id: string; name: string }[] }) {
+  const [state, action, pending] = useActionState(createBadgeType, null);
+  const id = useId();
+  return (
+    <form action={action} key={state?.ok ? state.message : "form"} className="grid gap-3 p-5">
+      <div className="grid gap-1">
+        <label htmlFor={`${id}-n`} className="text-xs font-semibold">Name</label>
+        <input id={`${id}-n`} name="name" required minLength={3} maxLength={120} className={field} placeholder="e.g. Soldering Safety" />
+      </div>
+      <div className="grid gap-1">
+        <label htmlFor={`${id}-d`} className="text-xs font-semibold">What it certifies <span className="font-normal text-ink-soft">(optional)</span></label>
+        <input id={`${id}-d`} name="description" maxLength={500} className={field} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <div className="grid min-w-48 flex-1 gap-1">
+          <label htmlFor={`${id}-o`} className="text-xs font-semibold">Issuing organisation</label>
+          <select id={`${id}-o`} name="orgId" required className={field}>{orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select>
+        </div>
+        <div className="grid gap-1">
+          <label htmlFor={`${id}-v`} className="text-xs font-semibold">Valid for (days)</label>
+          <input id={`${id}-v`} name="validityDays" type="number" required min={1} max={3650} defaultValue={365} className={`${field} w-28`} />
+        </div>
+      </div>
+      <Button type="submit" size="sm" disabled={pending} className="w-fit">Add badge type</Button>
       <Result state={state} />
     </form>
   );

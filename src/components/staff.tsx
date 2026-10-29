@@ -131,3 +131,61 @@ export function ResourceTile({
     </article>
   );
 }
+
+// Per-resource use, last 30 days (PRD 12): estimate before listing, booked vs open hours, recorded use.
+export interface ResourceUse {
+  id: string;
+  name: string;
+  category: ResourceCategory;
+  status: ResourceStatus;
+  estimated_current_usage: string;
+  organizations?: { name: string } | null;
+  hours: number;
+  booked: number;
+  available: number;
+  utilisation: number | null;
+  bookings: number;
+  noShows: number;
+}
+
+export function ResourceUseTable({ rows, showOrg }: { rows: ResourceUse[]; showOrg?: boolean }) {
+  const cell = "px-3 py-3 text-right font-mono";
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-sm">
+        <thead>
+          <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+            <th scope="col" className="px-5 py-3 font-semibold">Resource</th>
+            <th scope="col" className="px-3 py-3 font-semibold">Status</th>
+            <th scope="col" className="px-3 py-3 font-semibold">Before listing</th>
+            <th scope="col" className="px-3 py-3 text-right font-semibold">Open h</th>
+            <th scope="col" className="px-3 py-3 text-right font-semibold">Booked h</th>
+            <th scope="col" className="px-3 py-3 text-right font-semibold">Used h</th>
+            <th scope="col" className="px-3 py-3 text-right font-semibold">Use</th>
+            <th scope="col" className="px-3 py-3 text-right font-semibold">Completed</th>
+            <th scope="col" className="px-5 py-3 text-right font-semibold">No-shows</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <th scope="row" className="px-5 py-3 text-left font-semibold">
+                {r.name} <span className="font-normal text-ink-soft">· {showOrg ? r.organizations?.name : CATEGORIES[r.category].label}</span>
+              </th>
+              <td className="px-3 py-3">
+                <Flag tone={r.status === "active" ? "good" : r.status === "unsafe" ? "danger" : "warn"}>{r.status.replaceAll("_", " ")}</Flag>
+              </td>
+              <td className="px-3 py-3 text-ink-soft">{r.estimated_current_usage}</td>
+              <td className={cell}>{r.available || "—"}</td>
+              <td className={cell}>{r.booked}</td>
+              <td className={cell}>{r.hours}</td>
+              <td className={cell}>{r.utilisation === null ? "—" : `${r.utilisation}%`}</td>
+              <td className={cell}>{r.bookings}</td>
+              <td className="px-5 py-3 text-right font-mono">{r.noShows}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CalendarClock, CircleCheck, ClipboardList, PackageCheck, PackageOpen, TriangleAlert, Undo2, Users } from "lucide-react";
+import { BadgeCheck, Building2, CalendarClock, CircleCheck, ClipboardList, PackageCheck, PackageOpen, Scale, ScanSearch, TriangleAlert, Undo2, Users } from "lucide-react";
 import { formatTime, relativeDay } from "@/components/format";
 import { ActivityLine, QueueRow, ResourceTile } from "@/components/staff";
 import { buttonVariants } from "@/components/ui/button";
@@ -94,6 +94,30 @@ export default async function OwnerHome() {
           <PanelFooterLink href="/owner/handovers">Open the handover desk</PanelFooterLink>
         </Panel>
       </section>
+
+      <Panel aria-labelledby="queues-heading" className="mt-4">
+        <PanelHeading
+          id="queues-heading"
+          title="Also waiting on you"
+          description="AI condition flags to confirm or dismiss, certificates to verify, and damage reports you filed."
+          aside={<CountBadge tone="neutral">{d.aiFlags.length + d.certificates.length + d.underReview.length}</CountBadge>}
+        />
+        {d.aiFlags.length || d.certificates.length || d.underReview.length ? (
+          <ul className="py-1">
+            {d.aiFlags.map((b) => (
+              <ActivityLine key={`ai-${b.id}`} icon={ScanSearch} title={`${b.resources.name} · AI flagged a possible difference`} detail={`Returned by ${b.profiles?.full_name ?? "student"}. A suggestion only: confirm as damage or close the return.`} when="Confirm or dismiss" href={`/owner/bookings/${b.id}`} />
+            ))}
+            {d.certificates.length > 0 && (
+              <ActivityLine icon={BadgeCheck} title={`${d.certificates.length} training certificate${d.certificates.length === 1 ? "" : "s"} to verify`} detail={`Oldest from ${d.certificates[0].profiles?.full_name ?? "a student"} · ${d.certificates[0].badge_types.name}`} when={`waiting ${waited(d.certificates[0].created_at, d.now)}`} href="/owner/badges" />
+            )}
+            {d.underReview.map((b) => (
+              <ActivityLine key={`rv-${b.id}`} icon={Scale} title={`${b.resources.name} · damage report under review`} detail={`${b.profiles?.full_name ?? "Student"} · a Manager decides after the student responds`} when="With the Manager" href={`/owner/bookings/${b.id}`} />
+            ))}
+          </ul>
+        ) : (
+          <EmptyState compact icon={CircleCheck} title="Nothing else waiting.">No AI flags, certificates or open damage reports.</EmptyState>
+        )}
+      </Panel>
 
       <SectionTitle
         title="Your lending shelf"

@@ -42,14 +42,14 @@ export default async function AdminHome() {
       <SummaryRow>
         <SummaryCard label="Verifications" value={q.verifications.length} note="Oldest first" icon={ShieldCheck} href="/admin/verifications" />
         <SummaryCard label="Emergency credits" value={q.emergency.length} note={q.emergency.length ? "Need a decision" : "None waiting"} icon={LifeBuoy} />
-        <SummaryCard label="Escalations" value={q.escalations} note="Never auto-decided" icon={BellRing} />
-        <SummaryCard label="High-severity incidents" value={q.highIncidents} note={q.highIncidents ? "Open now" : "None open"} tone={q.highIncidents ? "alert" : "default"} icon={Siren} />
+        <SummaryCard label="Escalations" value={q.escalations} note="Never auto-decided" icon={BellRing} href="#action-heading" />
+        <SummaryCard label="High-severity incidents" value={q.highIncidents} note={q.highIncidents ? "Open now" : "None open"} tone={q.highIncidents ? "alert" : "default"} icon={Siren} href="/admin/cases" />
       </SummaryRow>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
         <Panel aria-labelledby="action-heading">
-          <PanelHeading id="action-heading" title="Action required" description="Student verification and emergency credit requests, oldest first." aside={<CountBadge>{q.verifications.length + q.emergency.length} waiting</CountBadge>} />
-          {q.verifications.length || q.emergency.length ? (
+          <PanelHeading id="action-heading" title="Action required" description="Verifications, escalations, high-severity incidents and emergency credit requests." aside={<CountBadge>{q.verifications.length + q.emergency.length + q.escalations + q.highIncidents} waiting</CountBadge>} />
+          {q.verifications.length || q.emergency.length || q.escalations || q.highIncidents ? (
             <ul className="divide-y divide-line">
               {q.verifications.slice(0, 4).map((p) => (
                 <QueueRow
@@ -61,6 +61,28 @@ export default async function AdminHome() {
                   now={now}
                   href="/admin/verifications"
                   primary
+                />
+              ))}
+              {q.escalated.map((b) => (
+                <QueueRow
+                  key={b.id}
+                  name={b.profiles?.full_name ?? "Student"}
+                  title={`${b.resources?.name ?? "Booking"} · Manager has not decided`}
+                  detail={`${b.profiles?.full_name ?? "Student"} · ${b.resources?.organizations?.name ?? ""} · escalation alert, follow up with the Manager`}
+                  since={b.escalated_at ?? b.created_at}
+                  now={now}
+                  href={`/admin/bookings/${b.id}`}
+                />
+              ))}
+              {q.incidents.filter((i) => i.severity === "high").map((i) => (
+                <QueueRow
+                  key={i.id}
+                  name={i.resources.name}
+                  title={`${i.resources.name} · high-severity incident`}
+                  detail={`${i.resources.organizations?.name ?? ""} · ${i.status} · ${i.description}`}
+                  since={i.created_at}
+                  now={now}
+                  href={`/admin/cases#incident-${i.id}`}
                 />
               ))}
               {q.emergency.map((e) => (
