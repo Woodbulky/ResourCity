@@ -67,6 +67,8 @@ export const DEMO_ACCOUNTS = {
   student: { label: "Student — Riya", email: "riya@dvit.edu.in" },
   owner: { label: "Owner — Photography Club", email: "photo.lead@dvit.edu.in" },
   manager: { label: "Manager — Prof. Mehta", email: "prof.mehta@dvit.edu.in" },
+  // Second Manager: decides cases the Photography Club Owner files (demo script step 8, conflict of interest).
+  manager2: { label: "Manager — Prof. Kulkarni", email: "prof.kulkarni@dvit.edu.in" },
   admin: { label: "Admin", email: "admin@dvit.edu.in" },
 } as const;
 export type DemoAccount = keyof typeof DEMO_ACCOUNTS;

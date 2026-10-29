@@ -215,7 +215,8 @@ await check("closing the incident never restores the resource; restoring is a se
   assert.equal((await notes(aarav, "INCIDENT_CLOSED")).length, 1);
   ok(await db.rpc("set_resource_status", { p_resource: cnc, p_actor: mehta, p_role: "manager", p_status: "active", p_reason: "Inspected and safe to use" }));
   assert.equal(ok(await db.from("resources").select("status").eq("id", cnc).single()).status, "active");
-  assert.equal((await events(cnc, "RESOURCE_STATUS_CHANGED")).length, 2);
+  const last = (await events(cnc, "RESOURCE_STATUS_CHANGED")).sort((x, y) => y.id - x.id).slice(0, 2); // audit log outlives re-seeds
+  assert.deepEqual(last.map((e) => `${e.from_state}>${e.to_state}`), ["unsafe>active", "active>unsafe"]);
 });
 
 // ---------------------------------------------------------------- badges

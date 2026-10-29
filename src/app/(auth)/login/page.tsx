@@ -18,6 +18,7 @@ const DEMO_COPY: Record<DemoAccount, { name: string; text: string }> = {
   student: { name: "Riya Deshmukh", text: "Browse, check eligibility, request and track bookings" },
   owner: { name: "Photography Club", text: "Approve requests, hand over by QR, record returns" },
   manager: { name: "Prof. Mehta", text: "Restricted approvals, disputes, penalties, incidents" },
+  manager2: { name: "Prof. Kulkarni", text: "Decides the damage case the Photography Club Owner filed" },
   admin: { name: "Campus Admin", text: "Verify students, grant roles, policies and audit log" },
 };
 

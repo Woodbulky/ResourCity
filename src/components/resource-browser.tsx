@@ -73,7 +73,8 @@ export function ResourceBrowser({ resources }: { resources: ResourceCardData[] }
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const words = parsed ? [] : deferred.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // A sentence sent to the parser is not a list of words every card must contain.
+  const words = parsed || parsing ? [] : deferred.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const keywords = has("keywords") ? (f?.keywords ?? []).map((k) => k.toLowerCase()) : [];
   const shown = resources.filter((r) => {
     if (group !== "All" && CATEGORIES[r.category].group !== group) return false;
@@ -134,6 +135,7 @@ export function ResourceBrowser({ resources }: { resources: ResourceCardData[] }
         </label>
       </form>
       <div aria-live="polite" className="mt-2 grid gap-2">
+        {parsing && <p className="text-sm text-ink-soft">Reading your search… the AI turns it into filters you can edit; this can take a few seconds.</p>}
         {aiNote && <p className="text-sm text-ink-soft">{aiNote} Matching your words instead.</p>}
         {parsed && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
