@@ -21,7 +21,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </main>
         <footer className="flex flex-wrap justify-between gap-3 px-4 pb-5 pt-2 text-xs text-ink-soft sm:px-8 lg:px-10">
           <span>Made for a campus that shares.</span>
-          <span>ResourCity · Deccan Valley is a fictional demo campus</span>
         </footer>
       </div>
     </ShellProvider>

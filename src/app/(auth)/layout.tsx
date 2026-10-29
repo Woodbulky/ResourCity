@@ -31,7 +31,6 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
             ))}
           </ul>
         </div>
-        <p className="relative mt-12 font-serif text-sm italic text-[#9fb4a6]">Fictional demo campus. All demo data is made up.</p>
       </aside>
       <main id="main" className="flex flex-col items-center bg-cream px-4 py-8 sm:px-8 lg:justify-center">
         <Link href="/" className="mb-8 rounded-md lg:hidden" aria-label="ResourCity home">

@@ -66,7 +66,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <div>
             <h2 id="demo-heading" className="font-semibold">Try the demo</h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-              One-click logins for the fictional DVIT campus. Any Google account also works in demo mode and lands as a
+              One-click logins for the DVIT campus. Any Google account also works in demo mode and lands as a
               student awaiting verification.
             </p>
           </div>

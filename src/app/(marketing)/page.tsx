@@ -237,7 +237,6 @@ export default function LandingPage() {
 
       <footer className="mx-auto flex min-h-20 w-[min(100%-32px,1280px)] flex-wrap items-center justify-between gap-4 py-4 text-xs text-ink-soft">
         <Wordmark className="scale-90" />
-        <span>Fictional demo campus: Deccan Valley Institute of Technology, Pune. All demo data is made up.</span>
         <a className="font-semibold text-moss underline-offset-4 hover:underline" href="https://github.com/Woodbulky/ResourCity">
           GitHub
         </a>
