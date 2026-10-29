@@ -2,10 +2,12 @@ import Link from "next/link";
 import { BadgeCheck, CalendarClock, CircleMinus, CirclePlus, Coins, LifeBuoy, Lock, Sparkles, UserX, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { EmergencyCreditsForm } from "@/components/booking-forms";
+import { BadgeSubmitForm } from "@/components/trust-forms";
 import { formatWhen, sentence } from "@/components/format";
 import { EmptyState, Flag, Panel, PanelHeading, PageHeading, SectionTitle } from "@/components/ui/kit";
 import type { LedgerKind } from "@/lib/domain/ledger";
 import { studentSnapshot } from "@/lib/server/student";
+import { createClient } from "@/lib/server/supabase";
 import { requireViewer } from "@/lib/server/viewer";
 
 const KIND: Record<LedgerKind, { label: string; icon: LucideIcon }> = {
@@ -22,7 +24,11 @@ const KIND: Record<LedgerKind, { label: string; icon: LucideIcon }> = {
 // Credits wallet (PRD 9, 12): balance, holds, ledger history, next reset, emergency requests, standing.
 export default async function WalletPage() {
   const viewer = await requireViewer();
-  const s = await studentSnapshot(viewer);
+  const [s, { data: types }] = await Promise.all([
+    studentSnapshot(viewer),
+    (await createClient()).from("badge_types").select("id, name, organizations(name)").order("name"),
+  ]);
+  const badgeTypes = (types ?? []).map((t) => ({ id: t.id, name: t.name, org: t.organizations?.name ?? "" }));
   const allowance = s.policy.values.weekly_allowance;
   const usedThisWeek = s.ledger
     .filter((l) => new Date(l.created_at) >= new Date(s.nextReset.getTime() - 7 * 86_400_000))
@@ -111,6 +117,15 @@ export default async function WalletPage() {
             </ul>
           ) : (
             <p className="mt-2 text-sm">No badges yet. Some machines and kits need training first; their cards tell you which.</p>
+          )}
+          {s.badges.some((b) => b.status === "rejected") && (
+            <p className="mt-2 text-xs text-ink-soft">A rejected certificate can be sent again with a clearer photo.</p>
+          )}
+          {viewer.status === "verified" && badgeTypes.length > 0 && (
+            <details id="badges" className="mt-4 scroll-mt-24">
+              <summary className="cursor-pointer text-sm font-semibold text-moss hover:underline">Add a training certificate</summary>
+              <div className="mt-3"><BadgeSubmitForm userId={viewer.id} types={badgeTypes} /></div>
+            </details>
           )}
         </Panel>
       </div>

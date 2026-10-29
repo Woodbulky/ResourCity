@@ -34,6 +34,7 @@ export interface NavArea {
 const PARENTS: [prefix: string, href: string][] = [
   ["/owner/bookings/", "/owner/requests"],
   ["/manager/bookings/", "/manager/queue"],
+  ["/admin/bookings/", "/admin/cases"],
 ];
 
 const activeHref = (items: NavItem[], path: string) => {

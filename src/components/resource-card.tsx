@@ -15,7 +15,8 @@ export const CARD_STATES: Record<CardState, { tone: FlagTone; icon: LucideIcon; 
   unavailable: { tone: "neutral", icon: Clock, label: "Unavailable" },
 };
 
-export function ResourceCard({ r, detailed = false }: { r: ResourceCardData; detailed?: boolean }) {
+// slot: a parsed search slot (query string for the resource page) and how many units are free then.
+export function ResourceCard({ r, detailed = false, slot }: { r: ResourceCardData; detailed?: boolean; slot?: { query: string; free: number; label: string } }) {
   const s = CARD_STATES[r.state];
   return (
     <article className="lift group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper">
@@ -31,7 +32,7 @@ export function ResourceCard({ r, detailed = false }: { r: ResourceCardData; det
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-3">
           <h3 className="font-semibold leading-snug">
-            <Link href={`/student/browse/${r.id}`} className="after:absolute after:inset-0 after:content-[''] hover:text-moss focus-visible:outline-none">
+            <Link href={`/student/browse/${r.id}${slot ? `?${slot.query}` : ""}`} className="after:absolute after:inset-0 after:content-[''] hover:text-moss focus-visible:outline-none">
               {r.name}
             </Link>
           </h3>
@@ -48,6 +49,11 @@ export function ResourceCard({ r, detailed = false }: { r: ResourceCardData; det
             <Flag tone={s.tone} icon={s.icon}>{s.label}</Flag>
           </p>
           <p className="mt-1.5 text-sm leading-snug text-ink">{r.headline.replace(/^Eligible · /, "")}</p>
+          {slot && (
+            <p className="mt-1 text-sm font-semibold">
+              {slot.free > 0 ? `${slot.free} free ${slot.label}` : `Taken ${slot.label} · join the waitlist`}
+            </p>
+          )}
         </div>
       </div>
     </article>

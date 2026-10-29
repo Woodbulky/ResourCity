@@ -35,3 +35,6 @@ export const sentence = (s: string) => {
 };
 
 export const rateLabel = (rate: number, unit: "hour" | "day") => (rate === 0 ? "Free" : `${rate} credits / ${unit}`);
+
+// Shown wherever an incident is reported or handled (PRD 11).
+export const EMERGENCY_NOTICE = "In an emergency, follow DVIT emergency procedures and call 112. ResourCity is not an emergency service.";

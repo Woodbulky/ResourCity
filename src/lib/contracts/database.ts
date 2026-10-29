@@ -1372,6 +1372,71 @@ export type Database = {
         Returns: Database["public"]["Tables"]["extension_requests"]["Row"]
       }
       offer_next: { Args: { p_resource: string }; Returns: number }
+      free_units: { Args: { p_end: string; p_resource: string; p_start: string }; Returns: number }
+      // Phase 5 trust workflows (migration 9)
+      set_resource_status: {
+        Args: { p_actor: string; p_reason: string; p_resource: string; p_role: string; p_status: Database["public"]["Enums"]["resource_status"] }
+        Returns: number
+      }
+      report_damage: {
+        Args: { p_actor: string; p_ai_flags: Json | null; p_booking: string; p_description: string; p_role: string; p_severity: Database["public"]["Enums"]["damage_severity"] }
+        Returns: Database["public"]["Tables"]["damage_cases"]["Row"]
+      }
+      respond_damage: {
+        Args: { p_case: string; p_photos: string[]; p_text: string; p_user: string }
+        Returns: Database["public"]["Tables"]["damage_cases"]["Row"]
+      }
+      decide_damage: {
+        Args: {
+          p_actor: string
+          p_case: string
+          p_charge: number
+          p_credits: number | null
+          p_maintenance: boolean
+          p_outcome: string
+          p_reason: string
+          p_restriction_days: number | null
+          p_role: string
+        }
+        Returns: Database["public"]["Tables"]["damage_cases"]["Row"]
+      }
+      decide_penalty: {
+        Args: { p_actor: string; p_amount: number | null; p_decision: string; p_penalty: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["penalties"]["Row"]
+      }
+      appeal_penalty: {
+        Args: { p_penalty: string; p_text: string; p_user: string }
+        Returns: Database["public"]["Tables"]["penalties"]["Row"]
+      }
+      override_allocation: {
+        Args: { p_actor: string; p_category: string; p_chosen: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      report_incident: {
+        Args: {
+          p_booking: string | null
+          p_description: string
+          p_evidence: string[]
+          p_location: string
+          p_occurred_at: string
+          p_resource: string
+          p_severity: Database["public"]["Enums"]["incident_severity"]
+          p_user: string
+        }
+        Returns: Database["public"]["Tables"]["incidents"]["Row"]
+      }
+      update_incident: {
+        Args: { p_actor: string; p_incident: string; p_note: string; p_restrict_days: number | null; p_role: string; p_status: Database["public"]["Enums"]["incident_status"] }
+        Returns: Database["public"]["Tables"]["incidents"]["Row"]
+      }
+      submit_badge: {
+        Args: { p_badge_type: string; p_path: string; p_user: string }
+        Returns: Database["public"]["Tables"]["user_badges"]["Row"]
+      }
+      decide_badge: {
+        Args: { p_actor: string; p_approve: boolean; p_badge: string; p_issued: string | null; p_reason: string; p_role: string }
+        Returns: Database["public"]["Tables"]["user_badges"]["Row"]
+      }
       policy_values: { Args: { p_version?: string }; Returns: Json }
       report_owner_absent: {
         Args: { p_booking: string; p_user: string }

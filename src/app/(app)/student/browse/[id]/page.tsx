@@ -8,6 +8,7 @@ import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { cn } from "cn";
 import { RequestForm } from "@/components/booking-forms";
+import { IncidentForm } from "@/components/trust-forms";
 import { CARD_STATES } from "@/components/resource-card";
 import { CATEGORIES } from "@/components/category";
 import { formatSlot, formatWhen, rateLabel, sentence } from "@/components/format";
@@ -175,6 +176,8 @@ export default async function ResourcePage({ params, searchParams }: PageProps<"
                           What to do:{" "}
                           {c.key === "credits" ? (
                             <Link href="/student/wallet#emergency" className="text-moss underline">{c.fix}</Link>
+                          ) : c.key === "badges" ? (
+                            <Link href="/student/wallet#badges" className="text-moss underline">{c.fix}</Link>
                           ) : c.fix.startsWith("/") ? "finish verification" : c.fix}
                         </p>
                       )}
@@ -319,6 +322,9 @@ export default async function ResourcePage({ params, searchParams }: PageProps<"
             <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-moss" />
             Busy resources are allocated by a published score, never by who clicked first. You always see your own breakdown.
           </p>
+          <Panel className="p-5">
+            <IncidentForm resourceId={id} location={r.location} date={istDate(snap.now)} time={formatInTimeZone(snap.now, APP_TIMEZONE, "HH:mm")} />
+          </Panel>
         </aside>
       </div>
     </>

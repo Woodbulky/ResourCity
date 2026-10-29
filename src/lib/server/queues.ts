@@ -26,7 +26,7 @@ export const ownerDesk = cache(async (viewer: SessionViewer) => {
   const ids = orgIds(viewer, "owner");
   const { end: todayEnd } = todayBounds(now);
   const live = ["pending_approval", "approved", "checked_out", "overdue", "returned", "under_review"] as const;
-  const [{ data: bookings }, { data: resources }] = await Promise.all([
+  const [{ data: bookings }, { data: resources }, { data: certificates }] = await Promise.all([
     supabase
       .from("bookings")
       .select(STAFF_BOOKING_FIELDS)
@@ -38,6 +38,13 @@ export const ownerDesk = cache(async (viewer: SessionViewer) => {
       .select("id, name, category, form_template, status, quantity, base_rate, rate_unit, approval_mode, allocation_mode, location, org_id, estimated_current_usage")
       .in("org_id", ids)
       .order("name"),
+    // Certificates waiting for badges these organisations issue (PRD 12 Owner queues).
+    supabase
+      .from("user_badges")
+      .select("id, certificate_path, ai_extraction, created_at, user_id, profiles!user_badges_user_id_fkey(full_name, department, year), badge_types!inner(name, validity_days, issuing_org_id)")
+      .in("badge_types.issuing_org_id", ids)
+      .eq("status", "pending")
+      .order("created_at"),
   ]);
   const all = bookings ?? [];
   const byStart = (a: { start_at: string }, b: { start_at: string }) => a.start_at.localeCompare(b.start_at);
@@ -55,6 +62,7 @@ export const ownerDesk = cache(async (viewer: SessionViewer) => {
     toClose: all.filter((b) => b.status === "returned"),
     underReview: all.filter((b) => b.status === "under_review"),
     resources: resources ?? [],
+    certificates: certificates ?? [],
   };
 });
 
@@ -80,7 +88,7 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
   const ids = orgIds(viewer, "manager");
   const soon = new Date(now.getTime() + 24 * 3_600_000);
 
-  const [{ data: approvals }, { data: cases }, { data: penalties }, { data: incidents }, { data: overdue }] = await Promise.all([
+  const [{ data: approvals }, { data: cases }, { data: penalties }, { data: incidents }, { data: overdue }, { data: outOfService }] = await Promise.all([
     supabase
       .from("bookings")
       .select(STAFF_BOOKING_FIELDS)
@@ -101,7 +109,7 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
       .order("created_at"),
     supabase
       .from("incidents")
-      .select("id, severity, status, description, location, created_at, resources!inner(id, name, org_id, organizations(name))")
+      .select("id, severity, status, description, location, created_at, occurred_at, booking_id, actions, evidence, resources!inner(id, name, status, org_id, organizations(name))")
       .in("resources.org_id", ids)
       .neq("status", "closed")
       .order("created_at"),
@@ -113,6 +121,8 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
       .eq("status", "overdue")
       .gte("escalation_level", 2)
       .order("end_at"),
+    // Unsafe or under maintenance: restoring is a separate, deliberate step (PRD 11).
+    supabase.from("resources").select("id, name, status, updated_at, organizations(name)").in("org_id", ids).neq("status", "active").order("updated_at"),
   ]);
 
   const items: QueueItem[] = [];
@@ -175,7 +185,7 @@ export const managerQueue = cache(async (viewer: SessionViewer) => {
     });
 
   items.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || a.since.localeCompare(b.since));
-  return { now, items, incidents: incidents ?? [], cases: cases ?? [], penalties: penalties ?? [] };
+  return { now, items, incidents: incidents ?? [], cases: cases ?? [], penalties: penalties ?? [], outOfService: outOfService ?? [] };
 });
 
 // Department overview (PRD 12): recorded use per resource and week over the last 6 weeks.
@@ -244,7 +254,7 @@ export const inbox = cache(async () => {
 // Admin action queue (PRD 12): verifications, emergency credits, escalations, high-severity incidents.
 export const adminQueue = cache(async () => {
   const supabase = await createClient();
-  const [{ data: verifications }, { data: emergency }, { count: escalations }, { count: highIncidents }] = await Promise.all([
+  const [{ data: verifications }, { data: emergency }, { count: escalations }, { count: highIncidents }, { data: cases }, { data: incidents }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, email, department, year, roll_number, id_proof_path, verification_submitted_at")
@@ -266,11 +276,25 @@ export const adminQueue = cache(async () => {
       .select("id", { count: "exact", head: true })
       .eq("severity", "high")
       .neq("status", "closed"),
+    // Damage cases assigned to an Admin: conflict of interest (PRD 3, 11).
+    supabase
+      .from("damage_cases")
+      .select("id, booking_id, severity, status, description, created_at, response_deadline, assigned_to, profiles!damage_cases_assigned_to_fkey!inner(is_admin), bookings!inner(profiles!bookings_user_id_fkey(full_name), resources!inner(name, organizations(name)))")
+      .eq("profiles.is_admin", true)
+      .neq("status", "decided")
+      .order("created_at"),
+    supabase
+      .from("incidents")
+      .select("id, severity, status, description, location, created_at, occurred_at, booking_id, actions, evidence, resources!inner(id, name, status, org_id, organizations(name))")
+      .neq("status", "closed")
+      .order("created_at"),
   ]);
   return {
     verifications: verifications ?? [],
     emergency: emergency ?? [],
     escalations: escalations ?? 0,
     highIncidents: highIncidents ?? 0,
+    cases: cases ?? [],
+    incidents: incidents ?? [],
   };
 });

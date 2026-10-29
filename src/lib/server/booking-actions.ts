@@ -1,14 +1,17 @@
 "use server";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "../contracts/api";
 import type { Json } from "../contracts/database";
 import { bookingRulesSchema, safetyRulesSchema } from "../contracts/resource";
 import { slotProblem } from "../domain/availability";
-import { creditCost, returnCharge } from "../domain/pricing";
+import { compareCondition } from "../ai/features";
+import { creditCost } from "../domain/pricing";
 import { istInstant, minutesBetween } from "../domain/time";
 import { friendlyError, transitionBooking } from "./booking";
+import { actualCharge, markAiFlags } from "./charges";
 import { appNow } from "./clock";
 import { checkQr, evaluateRequest, parseSlot } from "./requests";
 import { createClient, createServiceClient } from "./supabase";
@@ -187,6 +190,7 @@ export async function recordCondition(_prev: ActionResult | null, form: FormData
     p_supervisor: str(form, "supervisor"),
   });
   if (error) return { ok: false, error: friendlyError(error.message) };
+  if (phase === "return") after(() => compareCondition(bookingId)); // AI flags appear on the booking page when ready
   revalidatePath("/", "layout");
   redirect(`/${role}/bookings/${bookingId}`);
 }
@@ -198,24 +202,13 @@ export async function completeReturn(_prev: ActionResult | null, form: FormData)
   const bookingId = str(form, "bookingId");
   const role = await staffRole(viewer, bookingId, str(form, "as"));
   if (!role) return { ok: false, error: "You are not staff of this resource's organisation." };
-  const { data: b } = await createServiceClient()
-    .from("bookings")
-    .select("start_at, end_at, returned_at, credit_hold, resources(base_rate, rate_unit, peak_multiplier, booking_rules)")
-    .eq("id", bookingId)
-    .single();
-  if (!b?.resources || !b.returned_at) return { ok: false, error: "Record the return first." };
-  const rules = bookingRulesSchema.safeParse(b.resources.booking_rules).data ?? bookingRulesSchema.parse({});
-  const charge = Math.min(
-    b.credit_hold,
-    returnCharge(
-      { base_rate: b.resources.base_rate, rate_unit: b.resources.rate_unit, peak_multiplier: Number(b.resources.peak_multiplier), peak_window: rules.peak_window },
-      new Date(b.start_at),
-      new Date(b.end_at),
-      new Date(b.returned_at),
-    ),
-  );
+  const settled = await actualCharge(bookingId);
+  if (!settled) return { ok: false, error: "Record the return first." };
+  const { charge, hold } = settled;
   const result = await transitionBooking({ bookingId, event: "complete", actor: { id: viewer.id, role }, payload: { charge } });
-  return result.ok ? done(`Completed. ${charge} credits charged, ${b.credit_hold - charge} released.`) : result;
+  if (!result.ok) return result;
+  await markAiFlags(bookingId, "dismissed"); // Return OK: the Owner saw the AI flags and found no damage
+  return done(`Completed. ${charge} credits charged, ${hold - charge} released.`);
 }
 
 // ---------------------------------------------------------------------------- Phase 4: offers, absence, extensions, emergency credits

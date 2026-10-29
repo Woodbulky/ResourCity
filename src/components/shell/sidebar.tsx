@@ -61,6 +61,7 @@ async function buildArea(area: AppArea, v: SessionViewer, unread: number): Promi
         { href: "/owner/handovers", label: "Handovers", icon: "handover", count: desk.pickupsToday.length + desk.returnsDue.length },
         { href: "/owner/scan", label: "Scan", icon: "scan" },
         { href: "/owner/resources", label: "My resources", icon: "building" },
+        { href: "/owner/badges", label: "Certificates", icon: "verified", count: desk.certificates.length },
         notifications,
       ],
     };
@@ -88,6 +89,7 @@ async function buildArea(area: AppArea, v: SessionViewer, unread: number): Promi
     items: [
       { href: "/admin", label: "Overview", icon: "grid" },
       { href: "/admin/verifications", label: "Verifications", icon: "verified", count: a.verifications.length },
+      { href: "/admin/cases", label: "Cases & incidents", icon: "shield", count: a.cases.length + a.incidents.length },
       { href: "/admin/people", label: "People & roles", icon: "users" },
       { href: "/admin/policies", label: "Campus policies", icon: "scroll" },
       { href: "/admin/audit", label: "Audit log", icon: "clock" },

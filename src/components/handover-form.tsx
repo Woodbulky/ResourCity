@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { field } from "@/components/ui/kit";
 import { recordCondition } from "@/lib/server/booking-actions";
 import { createClient } from "@/lib/supabase/client";
+import { shrink } from "./upload";
 
 const MAX_BYTES = 10 * 1024 * 1024; // condition-photos bucket limit
 
@@ -50,10 +51,9 @@ export function HandoverForm({
       const storage = createClient().storage.from("condition-photos");
       const photos: { shot: string; path: string }[] = [];
       for (const [i, { shot, file }] of files.entries()) {
-        const f = file as File;
-        const ext = f.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${bookingId}/${phase}-${i + 1}-${crypto.randomUUID()}.${ext}`;
-        const { error } = await storage.upload(path, f, { contentType: f.type });
+        const f = await shrink(file as File); // 1280 px JPEG, the size the AI comparison expects
+        const path = `${bookingId}/${phase}-${i + 1}-${crypto.randomUUID()}.jpg`;
+        const { error } = await storage.upload(path, f, { contentType: f.type || "image/jpeg" });
         if (error) return setUploadError(`The “${shot}” photo did not upload. Use JPG, PNG or WebP and try again.`);
         photos.push({ shot, path });
       }
