@@ -43,3 +43,6 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+
+# Submission material stays local (never pushed)
+docs/SUBMISSION.md

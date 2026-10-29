@@ -3,7 +3,6 @@
 Lend a college's underused spaces and equipment to verified students, with eligibility gates, explainable fair allocation, credit limits, QR handovers, photo condition records, human-reviewed disputes and a full audit trail.
 
 - **Live:** https://resour-city.vercel.app → **Try the demo** (one-click logins; demo password `DvitDemo@2026`)
-- **Project document, testing instructions and judge script:** [docs/SUBMISSION.md](docs/SUBMISSION.md)
 - Requirements: [docs/PRD.md](docs/PRD.md) · Build log per phase: [docs/PROGRESS.md](docs/PROGRESS.md)
 
 Built in 48 hours for "Unlock Underused Equipment and Spaces". The demo institution (Deccan Valley Institute of Technology) and all demo data are fictional.
