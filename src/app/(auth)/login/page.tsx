@@ -15,7 +15,11 @@ const ERRORS: Record<string, string> = {
 
 // What each seeded account shows a judge (PRD 17).
 const DEMO_COPY: Record<DemoAccount, { name: string; text: string }> = {
-  student: { name: "Riya Deshmukh", text: "Browse, check eligibility, request and track bookings" },
+  student: { name: "Riya Sharma", text: "Browse, check eligibility, request and track bookings" },
+  aarav: { name: "Aarav Deshmukh", text: "No CNC training: sees Action required on the CNC" },
+  sneha: { name: "Sneha Iyer", text: "10 credits left: the emergency credits path" },
+  kabir: { name: "Kabir Singh", text: "2 no-shows: the strike warning" },
+  om: { name: "Om Kale", text: "Awaiting verification by the Admin" },
   owner: { name: "Photography Club", text: "Approve requests, hand over by QR, record returns" },
   manager: { name: "Prof. Mehta", text: "Restricted approvals, disputes, penalties, incidents" },
   manager2: { name: "Prof. Kulkarni", text: "Decides the damage case the Photography Club Owner filed" },

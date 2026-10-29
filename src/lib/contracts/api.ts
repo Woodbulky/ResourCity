@@ -65,6 +65,11 @@ export const membershipChangeSchema = z.object({
 // One-click demo logins (PRD 4), demo mode only.
 export const DEMO_ACCOUNTS = {
   student: { label: "Student — Riya", email: "riya@dvit.edu.in" },
+  // The other students the judge script (PRD 17) logs in as.
+  aarav: { label: "Student — Aarav", email: "aarav@dvit.edu.in" },
+  sneha: { label: "Student — Sneha", email: "sneha@dvit.edu.in" },
+  kabir: { label: "Student — Kabir", email: "kabir@dvit.edu.in" },
+  om: { label: "Student — Om (pending)", email: "om@dvit.edu.in" },
   owner: { label: "Owner — Photography Club", email: "photo.lead@dvit.edu.in" },
   manager: { label: "Manager — Prof. Mehta", email: "prof.mehta@dvit.edu.in" },
   // Second Manager: decides cases the Photography Club Owner files (demo script step 8, conflict of interest).
