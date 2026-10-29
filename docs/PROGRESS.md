@@ -1,5 +1,31 @@
 # ResourCity — progress
 
+## Phase 7 — Hardening (in progress, 2026-10-29; one decision open, see below)
+
+### Acceptance
+- `node --env-file=.env.local scripts/phase7-judge.mjs` (against `next start -p 3005`): the PRD 17 judge script, steps 1-11, twice in a row, each run after a reset. Each step makes the same database call as the button behind it and renders that role's next page; the scheduler ticks after every clock move, as the Render cron would. **24 of 26 steps pass in both runs; 5a fails by design (open decision).**
+- `scripts/phase7-forbidden.mjs` → 11 passed: student, Owner, Manager and Admin each try an insert and a delete-all on every public table over REST (RLS or missing grant refuses, no row disappears); a student approves; an Owner edits/lists into/re-hours/decides for another org; an Owner changes status, quantity, door token or a unit; a Manager grants roles, verifies, makes themselves Admin; every role and the service role edit or delete an audit row, forge `log_event`; a student reads others' ledger, notifications, cases, penalties, emails, ID proofs; signed-out callers.
+- `scripts/phase7-a11y.mjs` → 36 pages across all roles and signed out: every form control labelled, img alt, buttons and links named, one `<main id="main">` for the skip link, no duplicate ids, `lang`. The checker was verified against planted faults. Token contrast: all 29 text/background pairs in use pass AA (lowest: ink-soft on line, 4.58).
+- Mobile: at 390 px no page overflows horizontally (Manager pages, booking detail with the QR panel, pickup and return handover screens, checked in Chrome); the scanner is `max-w-sm`, square, rear camera, 240 px box.
+- `npm test` → 50 passed. `tsc`, `eslint`, `next build` pass. Regression: phase 1, 2, 3, 3-pages, 5, 5-pages, 6 pass; phase 4 14/15 (same time-of-day issue as before).
+
+### Built and fixed
+- **Training-badge gate was off for every seeded resource (fixed).** Zod 4's `z.string().uuid()` enforces the RFC variant nibble; the seed ids are `…-c000-…`, so `eligibilitySchema` failed and every reader fell back to `parse({})`, i.e. no requirements. Aarav could request the CNC without CNC Safety Training, at browse, request and batch allocation. All contract ids now use `z.guid()`; the domain test uses the real seeded badge id (fails without the fix).
+- **Seed:** Aarav now holds Photography Basics, so demo step 2 (camera Eligible, CNC Action required) is true with the gate working. Migration 12 wraps the base seed (`seed_demo_base`) and adds the one badge.
+- **Migration 11 hardening:** TRUNCATE revoked from `anon`/`authenticated` (it bypasses RLS); Owners can no longer UPDATE/DELETE `resource_units` (the old policy let an Owner move a unit out of `unsafe`, skipping the Manager-only restore); `resources` UPDATE is column-level without `status`, `quantity`, `door_qr_token` (pause/maintenance/unsafe only through the audited server path); `rls_auto_enable()` closed.
+- Loading and error states: `(app)/loading.tsx` on every navigation (also the layout's Suspense fallback), `(app)/error.tsx` (plain language, Try again, dashboard link, error digest), `not-found.tsx`, `global-error.tsx` with inline styles. Next 16 passes `retry`, not `reset`.
+- Reset demo data: already in the Admin demo controls since Phase 4 (`seed_demo` + `DEMO_RESET` audit); the judge script uses the same call.
+
+### Decisions and deviations
+1. The remaining Supabase security-advisor warnings are the RLS helper functions (`is_admin`, `is_owner_of`, …) that policies call; they must stay executable by `authenticated`. Leaked-password protection is an Auth dashboard setting (demo uses a shared password).
+2. `safeParse(...).data ?? parse({})` still fails open for malformed rule JSON. Stored rules are written only through the validated Owner form, so after the id fix this cannot trigger from app data; a hand-edited row would.
+3. The judge script drives the database calls behind each button, not the buttons. A by-hand run in a logged-out browser is still worth doing once the QR decision is made.
+
+### Open decision / for the architect
+- **Pickup QR window vs demo step 5.** The request form defaults to the next whole hour; the judge picks tomorrow, then presses +1 day. That leaves the clock 60 − (current minute) minutes before the slot, but the pickup QR opens only 15 min before (PRD 10). In about 3 of 4 runs the scan says "not valid yet" and the judge must press +15 min. Options: widen the window to 60 min, keep it and add "+15 min" to the testing instructions, or add a demo-clock button.
+- **Gmail SMTP (optional):** not built. `GMAIL_USER` / `GMAIL_APP_PASSWORD` are set, but every demo account is `@dvit.edu.in`, a domain we do not own; mail would go to real-looking addresses. If wanted: redirect all demo mail to one inbox.
+- Phase 4 time-of-day issue and the append-only audit log across resets: unchanged from Phase 6.
+
 ## Phase 6 — Dashboards and insights (complete, 2026-10-29)
 
 ### Acceptance
@@ -221,4 +247,4 @@ The architect supplied an HTML/CSS/JS mockup as the visual direction. The UI was
 - Next.js 16.4, Tailwind v4, shadcn/ui, zod 4, date-fns + date-fns-tz, @supabase/ssr. Next 16 renames `middleware.ts` to `proxy.ts`.
 
 ## Next
-Phase 7 — hardening (PRD 18): reset demo data button and a fresh-eyes judge-script run from a logged-out browser, forbidden-action test pass (PRD 15), accessibility and mobile pass, loading and error states, optional Gmail SMTP.
+Phase 7: settle the pickup QR window (above), rerun `phase7-judge.mjs` to 26/26, then a by-hand judge run in a logged-out browser. Then Phase 8 — submission (PRD 18/19).
